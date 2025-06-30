@@ -56,12 +56,6 @@ fun Application.getTuyaConfig(): TuyaConfig {
         ?: System.getenv("TUYA_ENDPOINT") 
         ?: "https://openapi.tuyaeu.com"
     
-    // Debug information to verify config loading
-    println("🔧 Config loaded from environment/config:")
-    println("  - Access ID: ${if (accessId.isNotBlank()) "${accessId.take(5)}***" else "MISSING!"}")
-    println("  - Access Secret: ${if (accessSecret.isNotBlank()) "${accessSecret.take(5)}***" else "MISSING!"}")
-    println("  - Endpoint: $endpoint")
-    
     // Check if credentials are missing
     if (accessId.isBlank() || accessSecret.isBlank()) {
         println("⚠️ WARNING: Missing Tuya Cloud credentials!")

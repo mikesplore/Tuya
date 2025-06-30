@@ -24,11 +24,6 @@ class TuyaCloudClient(
     private val projectCode: String? = null
 ) {
     init {
-        println("🔐 Initializing TuyaCloudClient")
-        println("🔑 Access ID: ${if (accessId.isNotBlank()) "${accessId.take(5)}*** (length: ${accessId.length})" else "*** (length: ${accessId.length})"}")
-        println("🔑 Access Secret: ${if (accessSecret.isNotBlank()) "${accessSecret.take(5)}*** (length: ${accessSecret.length})" else "*** (length: ${accessSecret.length})"}")
-        println("🌐 Endpoint: $endpoint")
-        println("📋 Project Code: $projectCode")
         
         if (accessId.isBlank() || accessSecret.isBlank()) {
             println("⚠️ WARNING: Empty credentials detected in TuyaCloudClient constructor!")

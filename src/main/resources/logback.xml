@@ -9,4 +9,10 @@
     </root>
     <logger name="org.eclipse.jetty" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
+
+    <!-- Add Ktor logging -->
+    <logger name="io.ktor.server.plugins.callloging" level="INFO"/>
+    <logger name="io.ktor.server.engine" level="INFO"/>
+    <logger name="io.ktor.routing" level="TRACE"/>
 </configuration>
+

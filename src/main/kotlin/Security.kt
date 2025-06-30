@@ -34,7 +34,7 @@ fun Application.configureSecurity() {
     
     // Auth routes (login, register)
     routing {
-        post("/api/auth/login") {
+        post("/auth/login") {
             val loginRequest = call.receive<LoginRequest>()
             
             val user = userRepository.validateCredentials(loginRequest.email, loginRequest.password)
@@ -46,7 +46,7 @@ fun Application.configureSecurity() {
             }
         }
         
-        post("/api/auth/register") {
+        post("/auth/register") {
             val registerRequest = call.receive<RegisterRequest>()
             
             val existingUser = userRepository.findByEmail(registerRequest.email)

@@ -5,12 +5,14 @@ A modern Kotlin/Ktor backend service for interacting with Tuya Cloud smart meter
 ## 🚀 Features
 
 - ✅ **Connect to Tuya Cloud API** with proper authentication
-- 📱 **List all devices** in your Tuya Cloud account via REST API
+- 📱 **Unified device management** - all devices are fetched from Tuya Cloud, cached in the database, and exposed via a single set of endpoints
 - 📊 **Get detailed device information** including all data points
 - 💰 **Add balance to meters** via API commands
 - 🔧 **Send custom commands** to devices
 - ⚡ **Set current readings, units, battery, and status**
-- 🔐 **Built-in authentication system**
+- 🔐 **Built-in authentication system** with JWT
+- 👥 **User-device assignments** - users are linked to specific devices
+- 🔒 **Access control** - users can only access devices assigned to them (except admin)
 - 🌐 **CORS support** for web frontends
 - 📝 **Comprehensive error handling**
 - 🖥️ **Command-line interface** for direct script usage
@@ -58,3 +60,24 @@ A modern Kotlin/Ktor backend service for interacting with Tuya Cloud smart meter
 
 The server will start on `http://localhost:8080`
 
+## 📡 API Endpoints
+
+The API provides the following main endpoint groups:
+
+- **Authentication**: `/auth/*` - Login and registration
+- **Users**: `/users/*` - User management
+- **Devices**: `/devices/*` - Device management with Tuya Cloud integration
+
+For full API documentation, see the [API_DOCUMENTATION.md](API_DOCUMENTATION.md) file.
+
+## 🧪 Testing
+
+A test script is provided to test the main API endpoints:
+
+```bash
+# Make the script executable
+chmod +x test_endpoints.sh
+
+# Run the tests
+./test_endpoints.sh
+```
