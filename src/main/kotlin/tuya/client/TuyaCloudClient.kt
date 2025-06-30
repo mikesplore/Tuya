@@ -8,9 +8,10 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.json.*
-import kotlinx.serialization.encodeToString
+import io.ktor.serialization.gson.*
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import java.security.MessageDigest
@@ -36,10 +37,7 @@ class TuyaCloudClient(
     
     private val httpClient = HttpClient {
         install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-            })
+            gson()
         }
         install(Logging) {
             level = LogLevel.INFO
@@ -157,25 +155,19 @@ class TuyaCloudClient(
                 // Handle different response formats
                 return try {
                     // Check if it's an empty list or contains non-device data
-                    if (result is JsonObject && result.containsKey("devices")) {
-                        val devicesElement = result["devices"]
+                    if (result is JsonObject && result.has("devices")) {
+                        val devicesElement = result.get("devices")
                         if (devicesElement != null) {
-                            val json = Json {
-                                ignoreUnknownKeys = true
-                                isLenient = true
-                            }
-                            json.decodeFromJsonElement<List<Device>>(devicesElement)
+                            val gson = com.google.gson.Gson()
+                            gson.fromJson(devicesElement, Array<Device>::class.java).toList()
                         } else {
                             emptyList()
                         }
                     } else {
                         // Try to parse directly as list of devices
                         try {
-                            val json = Json {
-                                ignoreUnknownKeys = true
-                                isLenient = true
-                            }
-                            json.decodeFromJsonElement<List<Device>>(result)
+                            val gson = com.google.gson.Gson()
+                            gson.fromJson(result, Array<Device>::class.java).toList()
                         } catch (e: Exception) {
                             // If parsing fails, return empty list (this can happen with virtual devices)
                             println("ℹ️ Could not parse devices list (this is normal for accounts with only virtual devices)")
@@ -334,7 +326,7 @@ class TuyaCloudClient(
                 timestamp = timestamp,
                 nonce = nonce,
                 accessToken = accessToken,
-                body = Json.encodeToString(DeviceCommand.serializer(), command)
+                body = com.google.gson.Gson().toJson(command)
             )
 
             val response: HttpResponse = httpClient.post("$endpoint$url") {
@@ -360,12 +352,11 @@ class TuyaCloudClient(
     }
 
     suspend fun addBalance(deviceId: String, amount: Double? = null): Boolean {
-        val value = if (amount != null) {
-            JsonObject(mapOf("amount" to JsonPrimitive(amount)))
-        } else {
-            JsonObject(emptyMap())
+        val jsonObject = com.google.gson.JsonObject()
+        if (amount != null) {
+            jsonObject.addProperty("amount", amount)
         }
-        return sendCommand(deviceId, "add_balance", value)
+        return sendCommand(deviceId, "add_balance", jsonObject)
     }
 
     private fun createAuthHeaders(

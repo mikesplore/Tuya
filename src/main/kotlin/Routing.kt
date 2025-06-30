@@ -1,61 +1,53 @@
 package com.mike
 
+import com.mike.database.repository.MeterRepository
+import com.mike.database.repository.UserMeterAssignmentRepository
+import com.mike.database.repository.UserRepository
+import com.mike.routes.meterRoutes
+import com.mike.routes.userRoutes
 import com.mike.tuya.config.getTuyaConfig
 import com.mike.tuya.model.*
 import com.mike.tuya.service.SmartMeterService
-import io.ktor.client.*
-import io.ktor.client.engine.apache.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.sessions.*
-import kotlinx.serialization.Serializable
+import com.google.gson.JsonElement
 
-@Serializable
 data class AddBalanceRequest(
     val amount: Double? = null
 )
 
-@Serializable
 data class DeviceListResponse(
     val devices: List<Device>,
     val count: Int
 )
 
-@Serializable
 data class CustomCommandRequest(
     val code: String,
-    val value: kotlinx.serialization.json.JsonElement? = null
+    val value: JsonElement? = null
 )
 
-@Serializable
 data class SetCurrentReadingRequest(
     val reading: Double
 )
 
-@Serializable
 data class SetUnitsRequest(
     val units: Int
 )
 
-@Serializable
 data class SetBatteryRequest(
     val percentage: Int
 )
 
-@Serializable
 data class SetStatusRequest(
     val status: String
 )
 
-@Serializable
 data class ErrorResponse(
     val error: String,
     val message: String
@@ -90,6 +82,11 @@ fun Application.configureRouting() {
         projectCode = tuyaConfig.projectCode
     )
     
+    // Initialize repositories
+    val userRepository = UserRepository()
+    val meterRepository = MeterRepository()
+    val userMeterAssignmentRepository = UserMeterAssignmentRepository()
+    
     routing {
         get("/") {
             call.respondText("Tuya Smart Meter API - Ktor Backend")
@@ -112,6 +109,15 @@ fun Application.configureRouting() {
                     ErrorResponse("connection_error", e.message ?: "Failed to connect to Tuya Cloud")
                 )
             }
+        }
+        
+        // Authenticated routes
+        authenticate {
+            // User management routes
+            userRoutes(userRepository)
+            
+            // Meter management routes
+            meterRoutes(meterRepository, userMeterAssignmentRepository, smartMeterService)
         }
         
         route("/api/v1") {
@@ -383,6 +389,16 @@ fun Application.configureRouting() {
                     )
                 }
             }
+        }
+        
+        // User management routes
+        authenticate {
+            val userRepository = UserRepository()
+            val meterRepository = MeterRepository()
+            val userMeterAssignmentRepository = UserMeterAssignmentRepository()
+            
+            userRoutes(userRepository)
+            meterRoutes(meterRepository, userMeterAssignmentRepository, smartMeterService)
         }
     }
 }

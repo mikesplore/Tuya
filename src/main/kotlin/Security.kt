@@ -1,47 +1,70 @@
 package com.mike
 
-import io.ktor.client.*
-import io.ktor.client.engine.apache.*
+import com.mike.auth.JwtService
+import com.mike.database.repository.UserRepository
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.auth.jwt.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.sessions.*
+
+data class LoginRequest(val email: String, val password: String)
+
+data class RegisterRequest(
+    val email: String, 
+    val password: String,
+    val phoneNumber: String? = null,
+    val firstName: String? = null,
+    val lastName: String? = null
+)
+
+data class AuthResponse(val token: String, val userId: String, val email: String)
 
 fun Application.configureSecurity() {
+    val config = environment.config
+    val jwtService = JwtService(config)
+    val userRepository = UserRepository()
+    
+    // Configure JWT authentication
     authentication {
-        oauth("auth-oauth-google") {
-            urlProvider = { "http://localhost:8080/callback" }
-            providerLookup = {
-                OAuthServerSettings.OAuth2ServerSettings(
-                    name = "google",
-                    authorizeUrl = "https://accounts.google.com/o/oauth2/auth",
-                    accessTokenUrl = "https://accounts.google.com/o/oauth2/token",
-                    requestMethod = HttpMethod.Post,
-                    clientId = System.getenv("GOOGLE_CLIENT_ID"),
-                    clientSecret = System.getenv("GOOGLE_CLIENT_SECRET"),
-                    defaultScopes = listOf("https://www.googleapis.com/auth/userinfo.profile")
-                )
-            }
-            client = HttpClient(Apache)
-        }
+        jwtService.configureJwtAuthentication(config, this)
     }
+    
+    // Auth routes (login, register)
     routing {
-        authenticate("auth-oauth-google") {
-            get("login") {
-                call.respondRedirect("/callback")
+        post("/api/auth/login") {
+            val loginRequest = call.receive<LoginRequest>()
+            
+            val user = userRepository.validateCredentials(loginRequest.email, loginRequest.password)
+            if (user != null) {
+                val token = jwtService.generateToken(user)
+                call.respond(AuthResponse(token, user.id, user.email))
+            } else {
+                call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Invalid credentials"))
             }
-
-            get("/callback") {
-                val principal: OAuthAccessTokenResponse.OAuth2? = call.authentication.principal()
-                call.sessions.set(UserSession(principal?.accessToken.toString()))
-                call.respondRedirect("/hello")
+        }
+        
+        post("/api/auth/register") {
+            val registerRequest = call.receive<RegisterRequest>()
+            
+            val existingUser = userRepository.findByEmail(registerRequest.email)
+            if (existingUser != null) {
+                call.respond(HttpStatusCode.Conflict, mapOf("message" to "Email already registered"))
+                return@post
             }
+            
+            val user = userRepository.createUser(
+                email = registerRequest.email,
+                password = registerRequest.password,
+                firstName = registerRequest.firstName,
+                lastName = registerRequest.lastName,
+                phoneNumber = registerRequest.phoneNumber
+            )
+            
+            val token = jwtService.generateToken(user)
+            call.respond(AuthResponse(token, user.id, user.email))
         }
     }
 }
-
-class UserSession(accessToken: String)

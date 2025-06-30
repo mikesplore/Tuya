@@ -3,9 +3,9 @@ package com.mike.tuya.service
 import com.mike.tuya.client.TuyaCloudClient
 import com.mike.tuya.model.*
 import kotlinx.datetime.Instant
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import kotlin.math.roundToInt
 
 class SmartMeterService(
