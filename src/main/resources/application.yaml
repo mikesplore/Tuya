@@ -1,0 +1,31 @@
+ktor:
+  application:
+    modules:
+      - com.mike.ApplicationKt.module
+
+  development: true
+
+  deployment:
+    port: 8080
+    host: 0.0.0.0
+    watch:
+      - classes
+      - resources
+
+# Tuya Cloud Configuration
+# These can be overridden by environment variables
+tuya:
+  # Required credentials - set via environment variables for security
+  access_id: ${ACCESS_ID:}
+  access_secret: ${ACCESS_SECRET:}
+  
+  # Optional configuration
+  endpoint: ${TUYA_ENDPOINT:https://openapi.tuyaeu.com}
+  project_code: ${PROJECT_CODE:}
+  device_id: ${DEVICE_ID:}
+
+# Security configuration for authentication
+security:
+  google:
+    client_id: ${GOOGLE_CLIENT_ID:}
+    client_secret: ${GOOGLE_CLIENT_SECRET:}
