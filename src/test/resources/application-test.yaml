@@ -1,0 +1,43 @@
+ktor:
+  application:
+    modules:
+      - com.mike.ApplicationKt.module
+
+  development: true
+
+  deployment:
+    port: 8081  # Different port for testing
+    host: 0.0.0.0
+
+# Tuya Cloud Configuration for testing
+tuya:
+  access_id: "test_access_id"
+  access_secret: "test_access_secret"
+  endpoint: "https://openapi.tuyaeu.com"
+  project_code: "test_project_code"
+  device_id: "test_device_id"
+
+# M-Pesa Configuration for testing (using Safaricom sandbox)
+mpesa:
+  consumer_key: "test_consumer_key"
+  consumer_secret: "test_consumer_secret"
+  base_url: "https://sandbox.safaricom.co.ke"
+  business_short_code: "174379"
+  passkey: "test_passkey"
+  callback_url: "http://localhost:8081/payments/callback"
+
+# Security configuration for testing
+security:
+  jwt:
+    secret: "test_jwt_secret_key"
+    issuer: "tuya-app-test"
+    audience: "tuya-users-test"
+    realm: "Tuya Smart Meter App Test"
+    token_expiration: 3600000 # 1 hour in milliseconds
+
+# Database configuration for testing
+database:
+  driver: "org.h2.Driver"
+  url: "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1"
+  user: "sa"
+  password: ""
