@@ -19,7 +19,7 @@ object DatabaseFactory {
         logger.info("Connecting to database at: $url")
         
         try {
-            // Simple direct connection using Exposed
+            // Connection using Exposed
             Database.connect(
                 url = url,
                 driver = driver,
@@ -32,7 +32,9 @@ object DatabaseFactory {
                 SchemaUtils.create(
                     Users,
                     Meters,
-                    UserMeterAssignments
+                    UserMeterAssignments,
+                    MpesaTransactions,
+                    MeterPayments
                 )
             }
             logger.info("Database connected and tables created successfully")

@@ -6,6 +6,7 @@ import com.mike.database.tables.Meters
 import com.mike.database.tables.Users
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
 import java.util.UUID
@@ -17,25 +18,24 @@ class UserMeterAssignmentRepository {
         val meterUUID = UUID.fromString(meterId)
         
         // Check if user exists
-        val userExists = Users.select { Users.id eq userUUID }.count() > 0
+        val userExists = Users.selectAll().where { Users.id eq userUUID }.count() > 0
         if (!userExists) {
             throw IllegalArgumentException("User not found")
         }
         
         // Check if meter exists
-        val meterExists = Meters.select { Meters.id eq meterUUID }.count() > 0
+        val meterExists = Meters.selectAll().where { Meters.id eq meterUUID }.count() > 0
         if (!meterExists) {
             throw IllegalArgumentException("Meter not found")
         }
         
-        // Check if assignment already exists
-        val exists = UserMeterAssignments.select { 
-            (UserMeterAssignments.userId eq userUUID) and
-            (UserMeterAssignments.meterId eq meterUUID)
+        // Check if meter is already assigned to any user
+        val meterAssigned = UserMeterAssignments.selectAll().where {
+            UserMeterAssignments.meterId eq meterUUID
         }.count() > 0
-        
-        if (exists) {
-            throw IllegalArgumentException("This meter is already assigned to this user")
+
+        if (meterAssigned) {
+            throw IllegalArgumentException("This meter is already assigned to a user")
         }
         
         val now = LocalDateTime.now()
@@ -67,9 +67,9 @@ class UserMeterAssignmentRepository {
     
     fun getUserMeters(userId: String): List<MeterDto> = transaction {
         val userUUID = UUID.fromString(userId)
-        
+
         (UserMeterAssignments innerJoin Meters)
-            .select { UserMeterAssignments.userId eq userUUID }
+            .selectAll().where { UserMeterAssignments.userId eq userUUID }
             .map { 
                 MeterDto(
                     id = it[Meters.id].value.toString(),
@@ -87,9 +87,9 @@ class UserMeterAssignmentRepository {
     
     fun getMeterUsers(meterId: String): List<UserDto> = transaction {
         val meterUUID = UUID.fromString(meterId)
-        
+
         (UserMeterAssignments innerJoin Users)
-            .select { UserMeterAssignments.meterId eq meterUUID }
+            .selectAll().where { UserMeterAssignments.meterId eq meterUUID }
             .map { 
                 UserDto(
                     id = it[Users.id].value.toString(),

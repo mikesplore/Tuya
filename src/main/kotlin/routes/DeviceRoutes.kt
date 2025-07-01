@@ -13,6 +13,7 @@ import io.ktor.server.routing.*
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
+import kotlinx.coroutines.launch
 import java.util.*
 
 data class DeviceListResponse(
@@ -60,60 +61,50 @@ fun Route.deviceRoutes(
     smartMeterService: SmartMeterService
 ) {
     
-    // Get all devices (fetch from cloud, cache in DB, then return)
+    // Get all devices (respond with DB first, then update from cloud in background)
     get("/devices") {
-        // Authentication removed - now available to all users
         try {
-            // Connect to Tuya Cloud
-            val connected = smartMeterService.connect()
-            if (!connected) {
-                call.respond(
-                    HttpStatusCode.ServiceUnavailable,
-                    ErrorResponse("connection_error", "Failed to connect to Tuya Cloud")
-                )
-                return@get
-            }
-            
-            // Fetch devices from Tuya Cloud
-            val cloudDevices = smartMeterService.listAllDevices()
-            println("📱 Fetched ${cloudDevices.size} devices from Tuya Cloud")
-            
-            // Sync cloud devices with local database
-            for (device in cloudDevices) {
-                val existingMeter = meterRepository.findByDeviceId(device.id)
-                if (existingMeter == null) {
-                    // Create new device in database
-                    meterRepository.createMeter(
-                        deviceId = device.id,
-                        name = device.name ?: "Smart Meter ${device.id}",
-                        productName = device.productName,
-                        description = "Auto-synced from Tuya Cloud",
-                        location = null
-                    )
-                    println("✅ Created new device for: ${device.id}")
-                } else {
-                    // Update existing device with cloud data
-                    meterRepository.updateMeter(
-                        id = existingMeter.id,
-                        name = device.name ?: existingMeter.name,
-                        productName = device.productName ?: existingMeter.productName,
-                        description = existingMeter.description,
-                        location = existingMeter.location,
-                        active = existingMeter.active
-                    )
-                    println("🔄 Updated existing device: ${existingMeter.id}")
+            // Respond immediately with local database devices
+            val dbDevices = meterRepository.getAllMeters()
+            call.respond(DeviceListResponse(devices = dbDevices, count = dbDevices.size))
+
+            // Launch background coroutine to fetch from cloud and update DB
+            launch {
+                try {
+                    val connected = smartMeterService.connect()
+                    if (!connected) {
+                        println("❌ Failed to connect to Tuya Cloud for background sync")
+                        return@launch
+                    }
+                    val cloudDevices = smartMeterService.listAllDevices()
+                    println("📱 (Background) Fetched ${cloudDevices.size} devices from Tuya Cloud")
+                    for (device in cloudDevices) {
+                        val existingMeter = meterRepository.findByDeviceId(device.id)
+                        if (existingMeter == null) {
+                            meterRepository.createMeter(
+                                deviceId = device.id,
+                                name = device.name ?: "Smart Meter ${device.id}",
+                                productName = device.productName,
+                                description = "Auto-synced from Tuya Cloud",
+                                location = null
+                            )
+                            println("✅ (Background) Created new device for: ${device.id}")
+                        } else {
+                            meterRepository.updateMeter(
+                                id = existingMeter.id,
+                                name = device.name ?: existingMeter.name,
+                                productName = device.productName ?: existingMeter.productName,
+                                description = existingMeter.description,
+                                location = existingMeter.location,
+                                active = existingMeter.active
+                            )
+                            println("🔄 (Background) Updated existing device: ${existingMeter.id}")
+                        }
+                    }
+                } catch (e: Exception) {
+                    println("❌ (Background) Error syncing devices: ${e.message}")
                 }
             }
-            
-            // Return all devices (no filtering by user)
-            val devices = meterRepository.getAllMeters()
-            
-            if (devices.isEmpty()) {
-                println("No devices found")
-            }
-            
-            call.respond(DeviceListResponse(devices = devices, count = devices.size))
-            
         } catch (e: Exception) {
             println("❌ Error fetching devices: ${e.message}")
             e.printStackTrace()

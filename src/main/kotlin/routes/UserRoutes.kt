@@ -2,6 +2,7 @@ package com.mike.routes
 
 import com.mike.database.entities.UserDto
 import com.mike.database.repository.UserRepository
+import com.mike.database.repository.UserMeterAssignmentRepository
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -25,6 +26,8 @@ data class PasswordChangeRequest(
 )
 
 fun Route.userRoutes(userRepository: UserRepository) {
+    // Create an instance of UserMeterAssignmentRepository
+    val userMeterAssignmentRepository = UserMeterAssignmentRepository()
     
     // Get all users (admin only)
     get("/users") {
@@ -41,6 +44,65 @@ fun Route.userRoutes(userRepository: UserRepository) {
             println("No users found")
         }
         call.respond(users)
+    }
+    
+    // Create new user (admin only)
+    post("/users") {
+        val principal = call.principal<JWTPrincipal>()
+        val role = principal?.payload?.getClaim("role")?.asString()
+        
+        if (role != "ADMIN") {
+            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
+            return@post
+        }
+        
+        try {
+            val request = call.receive<Map<String, String>>()
+            
+            // Extract required parameters
+            val email = request["email"] ?: return@post call.respond(
+                HttpStatusCode.BadRequest, 
+                mapOf("message" to "Email is required")
+            )
+            
+            val password = request["password"] ?: return@post call.respond(
+                HttpStatusCode.BadRequest, 
+                mapOf("message" to "Password is required")
+            )
+            
+            val firstName = request["firstName"] ?: request["name"]?.split(" ")?.getOrNull(0)
+            val lastName = request["lastName"] ?: request["name"]?.split(" ")?.getOrNull(1)
+            val role = request["role"] ?: "USER"
+            val phoneNumber = request["phoneNumber"]
+            
+            // Check if user with email already exists
+            val existingUser = userRepository.findByEmail(email)
+            if (existingUser != null) {
+                call.respond(
+                    HttpStatusCode.Conflict,
+                    mapOf("message" to "Email already registered", "userId" to existingUser.id)
+                )
+                return@post
+            }
+            
+            // Create the user
+            val user = userRepository.createUser(
+                email = email,
+                password = password,
+                firstName = firstName,
+                lastName = lastName,
+                phoneNumber = phoneNumber,
+                role = role
+            )
+            
+            call.respond(HttpStatusCode.Created, user)
+            
+        } catch (e: Exception) {
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                mapOf("message" to "Failed to create user: ${e.message}")
+            )
+        }
     }
     
     // Get current user
@@ -77,6 +139,27 @@ fun Route.userRoutes(userRepository: UserRepository) {
             call.respond(user)
         } else {
             call.respond(HttpStatusCode.NotFound, mapOf("message" to "User not found"))
+        }
+    }
+    
+    // Get user's devices
+    get("/users/{id}/devices") {
+        val principal = call.principal<JWTPrincipal>()
+        val currentUserId = principal?.payload?.subject
+        val role = principal?.payload?.getClaim("role")?.asString()
+        val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+        
+        // Only allow users to view their own devices, unless they're an admin
+        if (id != currentUserId && role != "ADMIN") {
+            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "You can only view your own devices"))
+            return@get
+        }
+        
+        try {
+            val devices = userMeterAssignmentRepository.getUserMeters(id)
+            call.respond(devices)
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.InternalServerError, mapOf("message" to "Failed to get user devices: ${e.message}"))
         }
     }
     

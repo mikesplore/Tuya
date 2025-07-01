@@ -24,6 +24,15 @@ tuya:
   project_code: ${PROJECT_CODE:}
   device_id: ${DEVICE_ID:}
 
+# M-Pesa Configuration
+mpesa:
+  consumer_key: ${MPESA_CONSUMER_KEY:}
+  consumer_secret: ${MPESA_CONSUMER_SECRET:}
+  base_url: ${MPESA_BASE_URL:https://sandbox.safaricom.co.ke}
+  business_short_code: ${MPESA_BUSINESS_SHORT_CODE:174379}
+  passkey: ${MPESA_PASSKEY:}
+  callback_url: ${MPESA_CALLBACK_URL:https://example.com/payments/callback}
+
 # Security configuration for authentication
 security:
   jwt:

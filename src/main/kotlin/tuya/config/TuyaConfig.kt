@@ -9,14 +9,7 @@ import java.io.File
 val dotenv: Dotenv by lazy {
     // Ensure we're in the project root directory
     val currentDir = System.getProperty("user.dir")
-    val envFile = File("$currentDir/.env")
-    
-    if (envFile.exists()) {
-        println("📂 Loading .env from: ${envFile.absolutePath}")
-    } else {
-        println("⚠️ .env file not found at: ${envFile.absolutePath}")
-    }
-    
+
     dotenv {
         ignoreIfMissing = true
         directory = currentDir
@@ -59,34 +52,6 @@ fun Application.getTuyaConfig(): TuyaConfig {
     // Check if credentials are missing
     if (accessId.isBlank() || accessSecret.isBlank()) {
         println("⚠️ WARNING: Missing Tuya Cloud credentials!")
-        println("   Please check your .env file and make sure ACCESS_ID and ACCESS_SECRET are set.")
-        println("   Current .env path: ${System.getProperty("user.dir")}/.env")
-        
-        // Print .env file contents for debugging (without showing full credentials)
-        try {
-            val envFile = java.io.File(".env")
-            if (envFile.exists()) {
-                println("\n📄 .env file exists. Checking content structure:")
-                envFile.readLines().forEach { line ->
-                    when {
-                        line.startsWith("ACCESS_ID=") -> {
-                            val value = line.substringAfter("=")
-                            println("   ACCESS_ID is ${if (value.isBlank()) "EMPTY" else "SET (length: ${value.length})"}")
-                        }
-                        line.startsWith("ACCESS_SECRET=") -> {
-                            val value = line.substringAfter("=")
-                            println("   ACCESS_SECRET is ${if (value.isBlank()) "EMPTY" else "SET (length: ${value.length})"}")
-                        }
-                        line.startsWith("#") || line.isBlank() -> {} // Skip comments and empty lines
-                        else -> println("   ${line.substringBefore("=")}=*** (${line.substringAfter("=").length} chars)")
-                    }
-                }
-            } else {
-                println("\n❌ .env file not found at ${System.getProperty("user.dir")}/.env")
-            }
-        } catch (e: Exception) {
-            println("❌ Error reading .env file: ${e.message}")
-        }
     }
     
     return TuyaConfig(

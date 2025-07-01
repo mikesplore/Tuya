@@ -3,10 +3,19 @@ package com.mike
 import com.mike.database.repository.MeterRepository
 import com.mike.database.repository.UserMeterAssignmentRepository
 import com.mike.database.repository.UserRepository
+import com.mike.database.repository.MpesaTransactionRepository
+import com.mike.database.repository.MeterPaymentRepository
 import com.mike.routes.deviceRoutes
 import com.mike.routes.userRoutes
+import com.mike.routes.mpesaRoutes
 import com.mike.tuya.config.getTuyaConfig
 import com.mike.tuya.service.SmartMeterService
+import com.mike.mpesa.config.getMpesaConfig
+import com.mike.mpesa.service.MpesaService
+import io.ktor.client.*
+import io.ktor.client.engine.apache.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.serialization.gson.*
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -31,7 +40,7 @@ fun Application.configureRouting() {
         allowHeader(HttpHeaders.ContentType)
         allowHeader(HttpHeaders.Authorization)
     }
-    
+
     install(StatusPages) {
         exception<Throwable> { call, cause ->
             call.respond(
@@ -40,7 +49,7 @@ fun Application.configureRouting() {
             )
         }
     }
-    
+
     val tuyaConfig = getTuyaConfig()
     val smartMeterService = SmartMeterService(
         accessId = tuyaConfig.accessId,
@@ -48,17 +57,33 @@ fun Application.configureRouting() {
         endpoint = tuyaConfig.endpoint,
         projectCode = tuyaConfig.projectCode
     )
-    
+
     // Initialize repositories
     val userRepository = UserRepository()
     val meterRepository = MeterRepository()
     val userMeterAssignmentRepository = UserMeterAssignmentRepository()
-    
+    val mpesaTransactionRepository = MpesaTransactionRepository()
+    val meterPaymentRepository = MeterPaymentRepository()
+
+    // Initialize M-Pesa configuration and service
+    val mpesaConfig = getMpesaConfig()
+    val httpClient = HttpClient(Apache) {
+        install(ContentNegotiation) {
+            gson()
+        }
+    }
+    val mpesaService = MpesaService(
+        httpClient = httpClient,
+        mpesaConfig = mpesaConfig,
+        mpesaTransactionRepository = mpesaTransactionRepository,
+        meterPaymentRepository = meterPaymentRepository
+    )
+
     routing {
         get("/") {
             call.respondText("Tuya Smart Meter API - Ktor Backend")
         }
-        
+
         get("/health") {
             try {
                 val connected = smartMeterService.connect()
@@ -77,12 +102,23 @@ fun Application.configureRouting() {
                 )
             }
         }
-        
+
         // Device management routes (unprotected)
         deviceRoutes(meterRepository, userMeterAssignmentRepository, smartMeterService)
-        
+
+        // M-Pesa routes (includes both authenticated and callback endpoints)
+        route("/api") {
+            mpesaRoutes(
+                mpesaService = mpesaService,
+                userRepository = userRepository,
+                meterRepository = meterRepository,
+                mpesaTransactionRepository = mpesaTransactionRepository,
+                meterPaymentRepository = meterPaymentRepository
+            )
+        }
+
         // Authenticated routes
-        authenticate {
+        authenticate("auth-jwt") {
             // User management routes
             userRoutes(userRepository)
         }

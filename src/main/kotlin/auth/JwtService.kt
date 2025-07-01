@@ -40,7 +40,7 @@ class JwtService(config: ApplicationConfig) {
     fun configureJwtAuthentication(config: ApplicationConfig, authConfig: AuthenticationConfig) {
         val realm = config.property("security.jwt.realm").getString()
         
-        authConfig.jwt {
+        authConfig.jwt("auth-jwt") {
             this.realm = realm
             verifier(jwtVerifier)
             validate { credential ->
