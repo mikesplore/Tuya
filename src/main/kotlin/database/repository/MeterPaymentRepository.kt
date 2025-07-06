@@ -1,7 +1,10 @@
-package com.mike.database.repository
+package database.repository
 
-import com.mike.database.entities.*
+import com.mike.database.entities.Meter
+import com.mike.database.entities.MpesaTransaction
+import com.mike.database.entities.User
 import com.mike.database.tables.MeterPayments
+import database.entities.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.math.BigDecimal
 import java.time.LocalDateTime
@@ -85,5 +88,35 @@ class MeterPaymentRepository {
             .orderBy(MeterPayments.paymentDate to org.jetbrains.exposed.sql.SortOrder.DESC)
             .limit(limit)
             .map { it.toDto() }
+    }
+
+    fun createDirectPayment(
+        meterId: UUID,
+        amount: BigDecimal,
+        description: String? = null,
+        balanceBefore: BigDecimal? = null,
+        balanceAfter: BigDecimal? = null,
+        unitsAdded: BigDecimal? = null
+    ): MeterPaymentDto = transaction {
+        val now = LocalDateTime.now()
+        val meter = Meter.findById(meterId) ?: throw IllegalArgumentException("Meter not found")
+
+        val payment = MeterPayment.new {
+            // For direct payments, we don't have a user association yet
+            // You can manually set this later if needed
+            this.user = null
+            this.meter = meter
+            this.mpesaTransaction = null // Direct payment without M-Pesa
+            this.amount = amount
+            this.paymentDate = now
+            this.status = "COMPLETED" // Direct payments are always completed
+            this.description = description ?: "Direct payment"
+            this.balanceBefore = balanceBefore
+            this.balanceAfter = balanceAfter
+            this.unitsAdded = unitsAdded
+            this.createdAt = now
+            this.updatedAt = now
+        }
+        payment.toDto()
     }
 }

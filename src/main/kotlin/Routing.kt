@@ -4,7 +4,6 @@ import com.mike.database.repository.MeterRepository
 import com.mike.database.repository.UserMeterAssignmentRepository
 import com.mike.database.repository.UserRepository
 import com.mike.database.repository.MpesaTransactionRepository
-import com.mike.database.repository.MeterPaymentRepository
 import com.mike.routes.deviceRoutes
 import com.mike.routes.userRoutes
 import com.mike.routes.mpesaRoutes
@@ -12,6 +11,7 @@ import com.mike.tuya.config.getTuyaConfig
 import com.mike.tuya.service.SmartMeterService
 import com.mike.mpesa.config.getMpesaConfig
 import com.mike.mpesa.service.MpesaService
+import database.repository.MeterPaymentRepository
 import io.ktor.client.*
 import io.ktor.client.engine.apache.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -23,6 +23,7 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.util.*
 
 data class ErrorResponse(
     val error: String,
@@ -57,6 +58,9 @@ fun Application.configureRouting() {
         endpoint = tuyaConfig.endpoint,
         projectCode = tuyaConfig.projectCode
     )
+    
+    // Store SmartMeterService in application attributes for callback access
+    attributes.put(AttributeKey<SmartMeterService>("SmartMeterService"), smartMeterService)
 
     // Initialize repositories
     val userRepository = UserRepository()
@@ -76,7 +80,7 @@ fun Application.configureRouting() {
         httpClient = httpClient,
         mpesaConfig = mpesaConfig,
         mpesaTransactionRepository = mpesaTransactionRepository,
-        meterPaymentRepository = meterPaymentRepository
+        meterPaymentRepository = meterPaymentRepository,
     )
 
     routing {
@@ -104,18 +108,23 @@ fun Application.configureRouting() {
         }
 
         // Device management routes (unprotected)
-        deviceRoutes(meterRepository, userMeterAssignmentRepository, smartMeterService)
+        deviceRoutes(
+            meterRepository = meterRepository,
+            userMeterAssignmentRepository = userMeterAssignmentRepository,
+            smartMeterService = smartMeterService,
+            meterPaymentRepository = meterPaymentRepository
+        )
 
         // M-Pesa routes (includes both authenticated and callback endpoints)
-        route("/api") {
             mpesaRoutes(
                 mpesaService = mpesaService,
                 userRepository = userRepository,
                 meterRepository = meterRepository,
                 mpesaTransactionRepository = mpesaTransactionRepository,
+                userMeterAssignmentRepository = userMeterAssignmentRepository,
                 meterPaymentRepository = meterPaymentRepository
             )
-        }
+
 
         // Authenticated routes
         authenticate("auth-jwt") {

@@ -11,9 +11,14 @@ data class MpesaConfig(
     val shortCode: String,
     val passkey: String = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919", // Sandbox passkey
     val baseUrl: String = "https://sandbox.safaricom.co.ke", // Sandbox URL
-    val callbackUrl: String = "https://your-domain.com/api/mpesa/callback" // Update with your actual callback URL
+    val callbackUrl: String = "https://f2fa-197-237-48-114.ngrok-free.app/mpesa/callback" // Default callback URL
 )
 
+/**
+ * Function to load M-Pesa configuration from .env file.
+ * Throws an exception if any required variable is missing.
+ * @return MpesaConfig object with loaded configuration.
+ */
 fun getMpesaConfig(): MpesaConfig {
     val dotenv = dotenv {
         directory = "."
@@ -24,7 +29,7 @@ fun getMpesaConfig(): MpesaConfig {
         consumerKey = dotenv["CONSUMER_KEY"] ?: throw IllegalStateException("CONSUMER_KEY not found in .env"),
         consumerSecret = dotenv["CONSUMER_SECRET"] ?: throw IllegalStateException("CONSUMER_SECRET not found in .env"),
         shortCode = dotenv["SHORT_CODE"] ?: throw IllegalStateException("SHORT_CODE not found in .env"),
-        callbackUrl = dotenv["MPESA_CALLBACK_URL"] ?: "http://localhost:8080/api/mpesa/callback"
+        callbackUrl = dotenv["MPESA_CALLBACK_URL"] ?: "https://7b9b-41-89-128-6.ngrok-free.app/mpesa/callback"
     )
 }
 

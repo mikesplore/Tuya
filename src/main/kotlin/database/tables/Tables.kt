@@ -57,9 +57,9 @@ object MpesaTransactions : UUIDTable() {
 
 // Meter payments table
 object MeterPayments : UUIDTable() {
-    val userId = reference("user_id", Users)
+    val userId = reference("user_id", Users).nullable()
     val meterId = reference("meter_id", Meters)
-    val mpesaTransactionId = reference("mpesa_transaction_id", MpesaTransactions)
+    val mpesaTransactionId = reference("mpesa_transaction_id", MpesaTransactions).nullable()
     val amount = decimal("amount", 10, 2)
     val unitsAdded = decimal("units_added", 10, 2).nullable()
     val balanceBefore = decimal("balance_before", 10, 2).nullable()

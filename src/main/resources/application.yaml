@@ -31,7 +31,7 @@ mpesa:
   base_url: ${MPESA_BASE_URL:https://sandbox.safaricom.co.ke}
   business_short_code: ${MPESA_BUSINESS_SHORT_CODE:174379}
   passkey: ${MPESA_PASSKEY:}
-  callback_url: ${MPESA_CALLBACK_URL:https://example.com/payments/callback}
+  callback_url: ${MPESA_CALLBACK_URL:https://7b9b-41-89-128-6.ngrok-free.app/payments/callback}
 
 # Security configuration for authentication
 security:

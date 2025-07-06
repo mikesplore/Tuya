@@ -7,6 +7,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import kotlin.math.roundToInt
+import java.math.BigDecimal
 
 class SmartMeterService(
     private val accessId: String,
@@ -20,6 +21,11 @@ class SmartMeterService(
     
     suspend fun listAllDevices(): List<Device> {
         return client.getAllDevices()
+    }
+    
+    // Alias for CLI compatibility
+    suspend fun listAllMeters(): List<Device> {
+        return listAllDevices()
     }
     
     suspend fun getDeviceDetails(deviceId: String): DeviceInfo? {
@@ -40,6 +46,9 @@ class SmartMeterService(
         var currentReading: Double? = null
         var unitsRemaining: Int? = null
         var batteryPercentage: Int? = null
+        var balance: Double? = null
+        var forwardEnergyTotal: Double? = null
+        var electricTotal: Double? = null
         
         for (dp in status) {
             when (dp.code) {
@@ -55,62 +64,233 @@ class SmartMeterService(
                 "battery_percentage" -> {
                     batteryPercentage = dp.value?.toIntOrNull()
                 }
+                "balance" -> {
+                    dp.value?.toDoubleOrNull()?.let { value ->
+                        balance = value
+                    }
+                }
+                "balance_energy" -> {
+                    dp.value?.toDoubleOrNull()?.let { value ->
+                        unitsRemaining = value.toInt()
+                    }
+                }
+                "forward_energy_total" -> {
+                    dp.value?.toDoubleOrNull()?.let { value ->
+                        forwardEnergyTotal = value
+                    }
+                }
+                "electric_total" -> {
+                    dp.value?.toDoubleOrNull()?.let { value ->
+                        electricTotal = value
+                    }
+                }
             }
         }
         
         // Only create summary if we have meaningful data
-        if (currentReading == null && unitsRemaining == null && batteryPercentage == null) {
+        if (currentReading == null && unitsRemaining == null && batteryPercentage == null && 
+            balance == null && forwardEnergyTotal == null && electricTotal == null) {
             return null
         }
         
-        val creditStatus = when {
-            unitsRemaining == null -> "Unknown"
-            unitsRemaining < 20 -> "Very Low Credit"
-            unitsRemaining < 50 -> "Low Credit"
+        val creditStatus = when (unitsRemaining) {
+            null -> "Unknown"
+            in 0..19 -> "Very Low Credit"
+            in 20..49 -> "Low Credit"
             else -> "Credit Level Good"
         }
         
-        val batteryStatus = when {
-            batteryPercentage == null -> "Unknown"
-            batteryPercentage < 20 -> "Battery Critically Low"
-            batteryPercentage < 50 -> "Battery Low"
+        val batteryStatus = when (batteryPercentage) {
+            null -> "Unknown"
+            in 0..19 -> "Battery Critically Low"
+            in 20..49 -> "Battery Low"
             else -> "Battery Level Good"
         }
         
         return SmartMeterSummary(
-            totalConsumption = currentReading,
+            totalConsumption = currentReading ?: forwardEnergyTotal,
             creditRemaining = unitsRemaining,
+            balance = balance,
+            totalEnergyPurchased = electricTotal,
             creditStatus = creditStatus,
             batteryLevel = batteryPercentage,
             batteryStatus = batteryStatus
         )
     }
     
-    suspend fun addBalance(deviceId: String, amount: Double? = null): CommandResponse {
-        val device = client.getDeviceInfo(deviceId)
-        if (device == null) {
-            return CommandResponse(
-                success = false,
-                message = "Device $deviceId not found",
-                deviceId = deviceId,
-                command = "add_balance"
-            )
-        }
+    // === BILLING OPERATIONS ===
+    
+    // Add Money to Meter (charge_money)
+    suspend fun addMoney(deviceId: String, amount: Double): CommandResponse {
+        val device = client.getDeviceInfo(deviceId) ?: return CommandResponse(
+            success = false,
+            message = "Device $deviceId not found",
+            deviceId = deviceId,
+            command = "charge_money"
+        )
         
-        val success = client.addBalance(deviceId, amount)
-        val amountStr = amount?.let { "$it units" } ?: "default amount"
+        val success = client.sendCommand(deviceId, "charge_money", JsonPrimitive(amount))
         
         return CommandResponse(
             success = success,
             message = if (success) {
-                "Balance command sent successfully! Added $amountStr to ${device.name ?: "device"}"
+                "Added ${amount} money units to ${device.name ?: "device"}"
             } else {
-                "Failed to add balance"
+                "Failed to add money"
             },
             deviceId = deviceId,
-            command = "add_balance",
-            value = amount?.let { JsonPrimitive(it) }
+            command = "charge_money",
+            value = JsonPrimitive(amount)
         )
+    }
+    
+    // Add Energy Units (charge_token)
+    suspend fun addToken(deviceId: String, token: String): CommandResponse {
+        val device = client.getDeviceInfo(deviceId) ?: return CommandResponse(
+            success = false,
+            message = "Device $deviceId not found",
+            deviceId = deviceId,
+            command = "charge_token"
+        )
+        
+        val success = client.sendCommand(deviceId, "charge_token", JsonPrimitive(token))
+        
+        return CommandResponse(
+            success = success,
+            message = if (success) {
+                "Token applied successfully to ${device.name ?: "device"}"
+            } else {
+                "Failed to apply token"
+            },
+            deviceId = deviceId,
+            command = "charge_token",
+            value = JsonPrimitive(token)
+        )
+    }
+    
+    // Set Energy Charge Rate
+    suspend fun setEnergyCharge(deviceId: String, chargeRate: Double): CommandResponse {
+        return sendCustomCommand(
+            deviceId = deviceId,
+            code = "energy_charge",
+            value = JsonPrimitive(chargeRate)
+        )
+    }
+    
+    // Reset Balance
+    suspend fun resetBalance(deviceId: String): CommandResponse {
+        return sendCustomCommand(
+            deviceId = deviceId,
+            code = "clear_energy",
+            value = JsonPrimitive(true)
+        )
+    }
+    
+    // Get Remaining Balance
+    suspend fun getRemainingBalance(deviceId: String): BalanceResponse {
+        val status = client.getDeviceStatus(deviceId)
+        
+        var energyBalance: Double? = null
+        var moneyBalance: Double? = null
+        
+        for (dp in status) {
+            when (dp.code) {
+                "balance_energy" -> {
+                    dp.value?.toDoubleOrNull()?.let { energyBalance = it }
+                }
+                "balance" -> {
+                    dp.value?.toDoubleOrNull()?.let { moneyBalance = it }
+                }
+            }
+        }
+        
+        return BalanceResponse(
+            success = energyBalance != null || moneyBalance != null,
+            deviceId = deviceId,
+            energyBalance = energyBalance,
+            moneyBalance = moneyBalance
+        )
+    }
+    
+    // Get Usage Data
+    suspend fun getEnergyUsage(deviceId: String): UsageResponse {
+        val status = client.getDeviceStatus(deviceId)
+        
+        var totalEnergyUsed: Double? = null
+        var totalEnergyPurchased: Double? = null
+        var monthlyEnergy: Double? = null
+        var dailyEnergy: Double? = null
+        
+        for (dp in status) {
+            when (dp.code) {
+                "forward_energy_total" -> {
+                    dp.value?.toDoubleOrNull()?.let { totalEnergyUsed = it }
+                }
+                "electric_total" -> {
+                    dp.value?.toDoubleOrNull()?.let { totalEnergyPurchased = it }
+                }
+                "month_energy" -> {
+                    dp.value?.toDoubleOrNull()?.let { monthlyEnergy = it }
+                }
+                "daily_energy" -> {
+                    dp.value?.toDoubleOrNull()?.let { dailyEnergy = it }
+                }
+            }
+        }
+        
+        return UsageResponse(
+            success = true,
+            deviceId = deviceId,
+            totalEnergyUsed = totalEnergyUsed,
+            totalEnergyPurchased = totalEnergyPurchased,
+            monthlyEnergy = monthlyEnergy,
+            dailyEnergy = dailyEnergy
+        )
+    }
+    
+    // Set Unit Price
+    suspend fun setUnitPrice(deviceId: String, price: Double, currencySymbol: String? = null): CommandResponse {
+        // First try goods_price (numeric format)
+        val numericResult = sendCustomCommand(
+            deviceId = deviceId,
+            code = "goods_price",
+            value = JsonPrimitive(price)
+        )
+        
+        // If supported and has currency symbol, also try unit_price (string format)
+        if (numericResult.success && currencySymbol != null) {
+            val priceString = "$currencySymbol $price/kWh"
+            sendCustomCommand(
+                deviceId = deviceId,
+                code = "unit_price",
+                value = JsonPrimitive(priceString)
+            )
+        }
+        
+        return numericResult
+    }
+    
+    // Toggle Prepayment Mode
+    suspend fun togglePrepaymentMode(deviceId: String, enabled: Boolean): CommandResponse {
+        return sendCustomCommand(
+            deviceId = deviceId,
+            code = "prepayment_switch",
+            value = JsonPrimitive(enabled)
+        )
+    }
+    
+    // Legacy method for compatibility
+    suspend fun addBalance(deviceId: String, amount: Double? = null): CommandResponse {
+        return if (amount != null) {
+            addMoney(deviceId, amount)
+        } else {
+            CommandResponse(
+                success = false,
+                message = "Amount is required for adding balance",
+                deviceId = deviceId,
+                command = "charge_money"
+            )
+        }
     }
     
     suspend fun sendCustomCommand(deviceId: String, code: String, value: JsonElement? = null): CommandResponse {
@@ -171,6 +351,21 @@ class SmartMeterService(
             code = "device_status",
             value = JsonPrimitive(status)
         )
+    }
+    
+    suspend fun addUnits(deviceId: String, units: Int): Boolean {
+        try {
+            // Use the correct client.sendCommand signature
+            return client.sendCommand(deviceId, "add_units", JsonPrimitive(units))
+        } catch (e: Exception) {
+            println("Error adding units: ${e.message}")
+            return false
+        }
+    }
+    
+    private suspend fun getCurrentBalance(deviceId: String): Int {
+        val status = client.getDeviceStatus(deviceId)
+        return status.find { it.code == "current_balance" }?.value?.toString()?.toIntOrNull() ?: 0
     }
     
     fun close() {

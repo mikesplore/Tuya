@@ -3,6 +3,7 @@ package com.mike.database.repository
 import com.mike.database.entities.MpesaTransaction
 import com.mike.database.entities.MpesaTransactionDto
 import com.mike.database.tables.MpesaTransactions
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.math.BigDecimal
 import java.time.LocalDateTime
@@ -43,11 +44,18 @@ class MpesaTransactionRepository {
         mpesaReceiptNumber: String?,
         transactionDate: LocalDateTime?
     ): MpesaTransactionDto? = transaction {
+        println("Looking for transaction with checkoutRequestId: $checkoutRequestId")
         val mpesaTransaction = MpesaTransaction.find {
             MpesaTransactions.checkoutRequestId eq checkoutRequestId
         }.firstOrNull()
+        
+        if (mpesaTransaction == null) {
+            println("No transaction found with checkoutRequestId: $checkoutRequestId")
+            return@transaction null
+        }
+        println("Found transaction: ${mpesaTransaction.id}")
 
-        mpesaTransaction?.let {
+        mpesaTransaction.let {
             it.responseCode = resultCode
             it.responseDescription = resultDesc
             it.mpesaReceiptNumber = mpesaReceiptNumber
@@ -57,6 +65,52 @@ class MpesaTransactionRepository {
                 else -> "FAILED"
             }
             it.callbackReceived = true
+            it.updatedAt = LocalDateTime.now()
+            it.toDto()
+        }
+    }
+
+    fun updateTransactionFromTimeout(
+        checkoutRequestId: String,
+        resultDesc: String = "Transaction timed out waiting for callback"
+    ): MpesaTransactionDto? = transaction {
+        val mpesaTransaction = MpesaTransaction.find {
+            MpesaTransactions.checkoutRequestId eq checkoutRequestId
+        }.firstOrNull()
+        
+        if (mpesaTransaction == null) {
+            return@transaction null
+        }
+        
+        mpesaTransaction.let {
+            it.responseCode = "1037" // Customer timeout code
+            it.responseDescription = resultDesc
+            it.status = "FAILED"
+            it.updatedAt = LocalDateTime.now()
+            it.toDto()
+        }
+    }
+
+    fun updateTransactionFromQuery(
+        checkoutRequestId: String,
+        resultCode: String,
+        resultDesc: String
+    ): MpesaTransactionDto? = transaction {
+        val mpesaTransaction = MpesaTransaction.find {
+            MpesaTransactions.checkoutRequestId eq checkoutRequestId
+        }.firstOrNull()
+        
+        if (mpesaTransaction == null) {
+            return@transaction null
+        }
+        
+        mpesaTransaction.let {
+            it.responseCode = resultCode
+            it.responseDescription = resultDesc
+            it.status = when (resultCode) {
+                "0" -> "SUCCESS"
+                else -> "FAILED"
+            }
             it.updatedAt = LocalDateTime.now()
             it.toDto()
         }
@@ -81,6 +135,14 @@ class MpesaTransactionRepository {
     fun getTransactionsByStatus(status: String): List<MpesaTransactionDto> = transaction {
         MpesaTransaction.find {
             MpesaTransactions.status eq status
+        }.map { it.toDto() }
+    }
+
+    fun getPendingTransactionsOlderThan(cutoffTime: LocalDateTime): List<MpesaTransactionDto> = transaction {
+        MpesaTransaction.find {
+            (MpesaTransactions.status eq "PENDING") and
+            (MpesaTransactions.callbackReceived eq false) and
+            (MpesaTransactions.createdAt less cutoffTime)
         }.map { it.toDto() }
     }
 

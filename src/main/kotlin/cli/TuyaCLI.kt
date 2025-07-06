@@ -9,7 +9,7 @@ import kotlin.system.exitProcess
 /**
  * Command-line interface that replicates the functionality of the Python scripts
  * Usage:
- *   - list: List all devices
+ *   - list: List all meters
  *   - show <device_id>: Show device details  
  *   - add-balance <device_id> [amount]: Add balance to meter
  *   - set-reading <device_id> <reading>: Set current reading
@@ -40,7 +40,7 @@ class TuyaCLI(private val config: TuyaConfig) {
         }
         
         when (args[0].lowercase()) {
-            "list" -> listDevices()
+            "list" -> listMeters()
             "show" -> {
                 if (args.size < 2) {
                     println("❌ Usage: show <device_id>")
@@ -111,50 +111,50 @@ class TuyaCLI(private val config: TuyaConfig) {
         }
     }
     
-    private suspend fun listDevices() {
-        println("\n📱 DEVICES IN TUYA CLOUD:")
+    private suspend fun listMeters() {
+        println("\n📱 METERS IN TUYA CLOUD:")
         println("=" * 70)
         
-        val devices = service.listAllDevices()
+        val meters = service.listAllMeters()
         
-        if (devices.isEmpty()) {
-            println("No devices found in your Tuya Cloud account.")
+        if (meters.isEmpty()) {
+            println("No meters found in your Tuya Cloud account.")
             return
         }
         
-        println("Found ${devices.size} device(s):\n")
+        println("Found ${meters.size} meter(s):\n")
         
-        devices.forEachIndexed { index, device ->
-            val online = if (device.online) "🟢 Online" else "🔴 Offline"
-            println("${index + 1}. ${device.name ?: "Unnamed Device"} [${device.id}]")
-            println("   Product: ${device.productName ?: "Unknown Product"}")
+        meters.forEachIndexed { index, meter ->
+            val online = if (meter.online) "🟢 Online" else "🔴 Offline"
+            println("${index + 1}. ${meter.name ?: "Unnamed Meter"} [${meter.id}]")
+            println("   Product: ${meter.productName ?: "Unknown Product"}")
             println("   Status: $online")
             println()
         }
         
-        if (devices.isNotEmpty()) {
-            val deviceId = devices.first().id
+        if (meters.isNotEmpty()) {
+            val meterId = meters.first().id
             println("Try these commands:")
-            println("  show $deviceId")
-            println("  add-balance $deviceId")
-            println("  check-cloud $deviceId")
+            println("  show $meterId")
+            println("  add-balance $meterId")
+            println("  check-cloud $meterId")
         }
     }
     
     private suspend fun showDevice(deviceId: String) {
-        println("\n📊 DEVICE DETAILS:")
+        println("\n📊 METER DETAILS:")
         println("=" * 70)
         
         val deviceInfo = service.getDeviceDetails(deviceId)
         if (deviceInfo == null) {
-            println("Device $deviceId not found.")
+            println("Meter $deviceId not found.")
             return
         }
         
         val device = deviceInfo.device
         val online = if (device.online) "🟢 Online" else "🔴 Offline"
         
-        println("Device: ${device.name ?: "Unnamed Device"}")
+        println("Meter: ${device.name ?: "Unnamed Meter"}")
         println("ID: ${device.id}")
         println("Product: ${device.productName ?: "Unknown Product"}")
         println("Model: ${device.model ?: "Unknown Model"}")
@@ -183,7 +183,7 @@ class TuyaCLI(private val config: TuyaConfig) {
                         println("Battery Level: ${dp.value}%")
                     }
                     "device_status" -> {
-                        println("Device Status: ${dp.value}")
+                        println("Meter Status: ${dp.value}")
                     }
                     else -> {
                         println("${dp.code}: ${dp.value}")
@@ -218,12 +218,12 @@ class TuyaCLI(private val config: TuyaConfig) {
                 }
             }
         } else {
-            println("No data points reported by this device")
-            println("This is normal for virtual devices without real hardware")
+            println("No data points reported by this meter")
+            println("This is normal for virtual meters without real hardware")
         }
         
         deviceInfo.specifications?.let { specs ->
-            println("\n⚙️ DEVICE SPECIFICATIONS:")
+            println("\n⚙️ METER SPECIFICATIONS:")
             println("-" * 70)
             specs.functions?.forEach { func ->
                 println("Function: ${func.code} (${func.type})")
@@ -239,13 +239,13 @@ class TuyaCLI(private val config: TuyaConfig) {
         println("=" * 70)
         
         val amountStr = amount?.let { "$it units" } ?: "default amount"
-        println("Adding $amountStr to device [$deviceId]...")
+        println("Adding $amountStr to meter [$deviceId]...")
         
         val result = service.addBalance(deviceId, amount)
         
         if (result.success) {
             println("✅ ${result.message}")
-            println("Note: Virtual devices may not actually update their balance")
+            println("Note: Virtual meters may not actually update their balance")
         } else {
             println("❌ ${result.message}")
         }
@@ -254,7 +254,7 @@ class TuyaCLI(private val config: TuyaConfig) {
     private suspend fun setCurrentReading(deviceId: String, reading: Double) {
         println("\n⚡ SETTING CURRENT READING:")
         println("=" * 70)
-        println("Setting current reading to $reading kWh for device [$deviceId]...")
+        println("Setting current reading to $reading kWh for meter [$deviceId]...")
         
         val result = service.setCurrentReading(deviceId, reading)
         
@@ -268,7 +268,7 @@ class TuyaCLI(private val config: TuyaConfig) {
     private suspend fun setUnitsRemaining(deviceId: String, units: Int) {
         println("\n💳 SETTING UNITS REMAINING:")
         println("=" * 70)
-        println("Setting units remaining to $units kWh for device [$deviceId]...")
+        println("Setting units remaining to $units kWh for meter [$deviceId]...")
         
         val result = service.setUnitsRemaining(deviceId, units)
         
@@ -282,7 +282,7 @@ class TuyaCLI(private val config: TuyaConfig) {
     private suspend fun setBattery(deviceId: String, percentage: Int) {
         println("\n🔋 SETTING BATTERY PERCENTAGE:")
         println("=" * 70)
-        println("Setting battery percentage to $percentage% for device [$deviceId]...")
+        println("Setting battery percentage to $percentage% for meter [$deviceId]...")
         
         val result = service.setBattery(deviceId, percentage)
         
@@ -300,7 +300,7 @@ class TuyaCLI(private val config: TuyaConfig) {
         
         val deviceInfo = service.getDeviceDetails(deviceId)
         if (deviceInfo == null) {
-            println("❌ Device $deviceId not found")
+            println("❌ Meter $deviceId not found")
             return
         }
         
@@ -308,7 +308,7 @@ class TuyaCLI(private val config: TuyaConfig) {
         
         val device = deviceInfo.device
         
-        println("\n📋 DEVICE INFORMATION FROM CLOUD:")
+        println("\n📋 METER INFORMATION FROM CLOUD:")
         println("-" * 40)
         println("Name: ${device.name}")
         println("ID: ${device.id}")
@@ -317,66 +317,58 @@ class TuyaCLI(private val config: TuyaConfig) {
         println("Category: ${device.category ?: "Unknown"}")
         println("IP: ${device.ip}")
         
-        println("\n📊 DEVICE STATUS FROM CLOUD:")
+        println("\n📊 METER STATUS FROM CLOUD:")
         println("-" * 40)
         
         if (deviceInfo.status.isNotEmpty()) {
-            println("Data points reported by device:")
+            println("Data points reported by meter:")
             deviceInfo.status.forEach { dp ->
                 println("  • ${dp.code}: ${dp.value}")
             }
         } else {
-            println("⚠️ No data points reported by this device")
-            println("   This is normal for virtual devices that don't have real hardware")
+            println("⚠️ No data points reported by this meter")
+            println("   This is normal for virtual meters that don't have real hardware")
         }
         
         println("\n🔍 SUMMARY:")
         println("-" * 40)
         if (deviceInfo.status.isEmpty()) {
-            println("📢 This virtual device has no real data points in the cloud")
-            println("   This is expected behavior for virtual devices")
+            println("📢 This virtual meter has no real data points in the cloud")
+            println("   This is expected behavior for virtual meters")
             println("   When you connect real hardware, data will appear here")
         } else {
-            println("✅ Device is reporting real data to the cloud!")
+            println("✅ Meter is reporting real data to the cloud!")
         }
         
         println("\n📋 NEXT STEPS:")
         println("1. Use the Ktor API for programmatic access")
         println("2. Check this status again after connecting real hardware")  
-        println("3. View device in Tuya IoT Platform: https://iot.tuya.com")
+        println("3. View meter in Tuya IoT Platform: https://iot.tuya.com")
         println("=" * 60)
     }
     
     private fun showUsage() {
-        println("""
-Tuya Smart Meter CLI - Kotlin version
-
-USAGE:
-    list                              List all devices
-    show <device_id>                  Show device details
-    add-balance <device_id> [amount]  Add balance to meter
-    set-reading <device_id> <reading> Set current reading (kWh)
-    set-units <device_id> <units>     Set units remaining (kWh)
-    set-battery <device_id> <percent> Set battery percentage (0-100)
-    check-cloud <device_id>           Check cloud status
-
-EXAMPLES:
-    list
-    show vdevo175121208259297
-    add-balance vdevo175121208259297 100
-    set-reading vdevo175121208259297 125.5
-    set-units vdevo175121208259297 75
-    set-battery vdevo175121208259297 85
-    check-cloud vdevo175121208259297
-
-CONFIGURATION:
-    Set these environment variables:
-    - ACCESS_ID: Your Tuya Cloud access ID
-    - ACCESS_SECRET: Your Tuya Cloud access secret
-    - TUYA_ENDPOINT: API endpoint (default: https://openapi.tuyaeu.com)
-    - PROJECT_CODE: Project code (optional)
-    - DEVICE_ID: Default device ID (optional)
-        """.trimIndent())
+        println("\n🛠️ TUYA SMART METER CLI")
+        println("=" * 70)
+        println("Usage: ./tuya-cli <command> [arguments]")
+        println()
+        println("Commands:")
+        println("  list                     - List all meters in Tuya Cloud")
+        println("  show <meter_id>          - Show detailed meter information")
+        println("  add-balance <meter_id> [amount] - Add balance to meter")
+        println("  set-reading <meter_id> <reading> - Set current reading (kWh)")
+        println("  set-units <meter_id> <units>     - Set units remaining")
+        println("  set-battery <meter_id> <percentage> - Set battery percentage (0-100)")
+        println("  check-cloud <meter_id>   - Check real cloud status")
+        println()
+        println("Examples:")
+        println("  ./tuya-cli list")
+        println("  ./tuya-cli show bf1234567890abcdef")
+        println("  ./tuya-cli add-balance bf1234567890abcdef 100")
+        println("  ./tuya-cli set-reading bf1234567890abcdef 150.5")
+        println("  ./tuya-cli set-units bf1234567890abcdef 50")
+        println("  ./tuya-cli set-battery bf1234567890abcdef 85")
+        println("=" * 70)
     }
     
     fun close() {

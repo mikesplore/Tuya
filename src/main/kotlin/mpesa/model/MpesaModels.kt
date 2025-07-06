@@ -65,7 +65,7 @@ data class StkCallback(
     @SerializedName("ResultDesc")
     val resultDesc: String,
     @SerializedName("CallbackMetadata")
-    val callbackMetadata: CallbackMetadata?
+    val callbackMetadata: CallbackMetadata? = null // This can be null for failed transactions
 )
 
 data class CallbackMetadata(

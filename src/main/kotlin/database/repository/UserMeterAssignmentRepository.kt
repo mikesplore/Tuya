@@ -104,6 +104,17 @@ class UserMeterAssignmentRepository {
                 )
             }
     }
+
+    //verify if a user has a meter assigned
+    fun isMeterAssignedToUser(userId: String, meterId: String): Boolean = transaction {
+        val userUUID = UUID.fromString(userId)
+        val meterUUID = UUID.fromString(meterId)
+
+        UserMeterAssignments.selectAll().where {
+            (UserMeterAssignments.userId eq userUUID) and
+            (UserMeterAssignments.meterId eq meterUUID)
+        }.count() > 0
+    }
     
     fun getAllAssignments(): List<UserMeterAssignmentDto> = transaction {
         UserMeterAssignments.selectAll().map {

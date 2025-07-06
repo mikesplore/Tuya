@@ -37,12 +37,18 @@ fun Application.configureSecurity() {
         post("/auth/login") {
             val loginRequest = call.receive<LoginRequest>()
             
+            val rulesResult = checkRules(loginRequest)
+            if (rulesResult != "Valid") {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to rulesResult))
+                return@post
+            }
+
             val user = userRepository.validateCredentials(loginRequest.email, loginRequest.password)
             if (user != null) {
                 val token = jwtService.generateToken(user)
                 call.respond(AuthResponse(token, user.id, user.email))
             } else {
-                call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Invalid credentials"))
+                call.respond(HttpStatusCode.NotFound, mapOf("message" to "Invalid credentials"))
             }
         }
         
@@ -67,4 +73,22 @@ fun Application.configureSecurity() {
             call.respond(AuthResponse(token, user.id, user.email))
         }
     }
+}
+
+fun checkRules(loginRequest: LoginRequest): String {
+    if (loginRequest.email.isBlank() && loginRequest.password.isBlank()) {
+        return "Email and password cannot be empty"
+    }
+    if (loginRequest.email.isBlank()) {
+        return "Email cannot be empty"
+    }
+
+    if (loginRequest.password.isBlank()) {
+        return "Password cannot be empty"
+    }
+    val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    if (!emailRegex.matches(loginRequest.email)) {
+        return "Invalid email format"
+    }
+    return "Valid"
 }

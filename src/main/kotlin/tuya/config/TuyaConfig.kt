@@ -3,7 +3,6 @@ package com.mike.tuya.config
 import io.github.cdimascio.dotenv.Dotenv
 import io.github.cdimascio.dotenv.dotenv
 import io.ktor.server.application.*
-import java.io.File
 
 // Initialize dotenv for use throughout the application
 val dotenv: Dotenv by lazy {
@@ -28,7 +27,7 @@ fun Application.getTuyaConfig(): TuyaConfig {
     val config = environment.config
     
     // Load .env directly to ensure it's properly initialized
-    val directDotenv = io.github.cdimascio.dotenv.dotenv {
+    val directDotenv = dotenv {
         ignoreIfMissing = true
         directory = System.getProperty("user.dir")
     }

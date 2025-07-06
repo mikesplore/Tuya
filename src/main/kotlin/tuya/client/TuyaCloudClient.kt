@@ -45,19 +45,15 @@ class TuyaCloudClient(
     suspend fun connect(): Boolean {
         return try {
             println("🌐 Connecting to Tuya Cloud API at $endpoint")
-            println("🔑 Using credentials: ${accessId.take(5)}***")
-            
+
             if (accessId.isBlank() || accessSecret.isBlank()) {
-                println("❌ ERROR: Access ID or Access Secret is blank!")
-                println("   Access ID length: ${accessId.length}")
-                println("   Access Secret length: ${accessSecret.length}")
+                println("❌ ERROR: Access ID or Secret is blank!")
                 return false
             }
             
             val response = refreshToken()
             
             if (response.success && !accessToken.isNullOrEmpty()) {
-                println("✅ Successfully connected to Tuya Cloud API")
                 true
             } else {
                 println("❌ Connection failed: ${response.msg}")
@@ -81,8 +77,7 @@ class TuyaCloudClient(
             nonce = nonce
         )
 
-        println("🔄 Refreshing access token...")
-        
+
         val response: HttpResponse = httpClient.get("$endpoint/v1.0/token") {
             parameter("grant_type", "1")
             headers.forEach { (key, value) ->
@@ -98,7 +93,6 @@ class TuyaCloudClient(
             val expireTime = result["expire_time"]?.toString()?.trim('"')?.toLongOrNull() ?: 0
             tokenExpireTime = System.currentTimeMillis() + (expireTime * 1000)
             
-            println("✅ Token refreshed successfully! Expires in ${expireTime}s")
         } else {
             println("❌ Failed to refresh token: ${apiResponse.msg}")
         }

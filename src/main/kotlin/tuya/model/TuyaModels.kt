@@ -84,6 +84,8 @@ data class DeviceInfo(
 data class SmartMeterSummary(
     val totalConsumption: Double? = null,
     val creditRemaining: Int? = null,
+    val balance: Double? = null,
+    val totalEnergyPurchased: Double? = null,
     val creditStatus: String,
     val batteryLevel: Int? = null,
     val batteryStatus: String
@@ -95,4 +97,39 @@ data class CommandResponse(
     val deviceId: String,
     val command: String,
     val value: JsonElement? = null
+)
+
+// Additional models for billing operations
+data class BalanceResponse(
+    val success: Boolean,
+    val deviceId: String,
+    val energyBalance: Double? = null,
+    val moneyBalance: Double? = null,
+    val message: String? = null
+)
+
+data class UsageResponse(
+    val success: Boolean,
+    val deviceId: String,
+    val totalEnergyUsed: Double? = null,
+    val totalEnergyPurchased: Double? = null,
+    val monthlyEnergy: Double? = null,
+    val dailyEnergy: Double? = null,
+    val message: String? = null
+)
+
+data class PriceSettingResponse(
+    val success: Boolean,
+    val deviceId: String,
+    val price: Double? = null,
+    val message: String? = null
+)
+
+data class AddTokenRequest(
+    val token: String
+)
+
+data class SetPriceRequest(
+    val price: Double,
+    val currencySymbol: String? = null
 )
