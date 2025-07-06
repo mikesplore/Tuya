@@ -17,6 +17,7 @@ import database.repository.MeterPaymentRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.coroutineScope
 import java.util.*
+import java.math.BigDecimal
 
 data class DeviceListResponse(
     val devices: List<Any>,
@@ -55,6 +56,20 @@ data class CustomCommandRequest(
 data class ErrorResponse(
     val error: String,
     val message: String
+)
+
+data class MeterPaymentRequest(
+    val amount: Double,
+    val paymentType: String, // "MONEY" or "TOKEN"
+    val token: String? = null, // Required for TOKEN payment type
+    val userId: String? = null, // Optional - can be derived from auth token
+    val mpesaTransactionId: String? = null, // Optional - for linking to MPesa transaction
+    val description: String? = null
+)
+
+data class SetPriceRequest(
+    val price: Double,
+    val currencySymbol: String? = null
 )
 
 fun Route.deviceRoutes(
@@ -321,8 +336,33 @@ fun Route.deviceRoutes(
                 return@post
             }
             
-            val result = smartMeterService.addBalance(device.deviceId, request.amount)
-            call.respond(result)
+            // Get current balance before adding money
+            val currentBalance = smartMeterService.getRemainingBalance(device.deviceId)
+            val balanceBefore = currentBalance.moneyBalance ?: 0.0
+            
+            // Add balance to device
+            val result = smartMeterService.addMoney(device.deviceId, request.amount)
+            
+            if (result.success && meterPaymentRepository != null) {
+                // Record the successful payment in database
+                val payment = meterPaymentRepository.createDirectPayment(
+                    meterId = UUID.fromString(id),
+                    amount = BigDecimal(request.amount.toString()),
+                    description = "Direct balance top-up",
+                    balanceBefore = BigDecimal(balanceBefore.toString()),
+                    balanceAfter = result.additionalData?.get("balanceAfter")?.toString()?.toBigDecimalOrNull(),
+                    unitsAdded = BigDecimal(request.amount.toString())
+                )
+                
+                // Include payment information in response
+                call.respond(mapOf(
+                    "success" to true,
+                    "message" to result.message,
+                    "payment" to payment
+                ))
+            } else {
+                call.respond(result)
+            }
             
         } catch (e: Exception) {
             println("❌ Error adding balance: ${e.message}")
@@ -501,6 +541,233 @@ fun Route.deviceRoutes(
             call.respond(
                 HttpStatusCode.InternalServerError,
                 ErrorResponse("refresh_error", e.message ?: "Failed to refresh devices")
+            )
+        }
+    }
+    
+    // Process meter payment with MPesa
+    post("/devices/{id}/payment") {
+        val id = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+        
+        try {
+            // Check if device exists
+            val device = meterRepository.findById(id)
+            if (device == null) {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse("device_not_found", "Device not found"))
+                return@post
+            }
+            
+            val request = call.receive<MeterPaymentRequest>()
+            
+            // Connect to Tuya Cloud
+            val connected = smartMeterService.connect()
+            if (!connected) {
+                call.respond(
+                    HttpStatusCode.ServiceUnavailable,
+                    ErrorResponse("connection_error", "Failed to connect to Tuya Cloud")
+                )
+                return@post
+            }
+            
+            // Get current balance
+            val currentBalance = smartMeterService.getRemainingBalance(device.deviceId)
+            val balanceBefore = currentBalance.moneyBalance ?: 0.0
+            
+            // Process the payment based on payment type
+            val result = when (request.paymentType) {
+                "MONEY" -> smartMeterService.addMoney(device.deviceId, request.amount)
+                "TOKEN" -> smartMeterService.addToken(device.deviceId, request.token 
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("token_required", "Token is required for TOKEN payment type")))
+                else -> return@post call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse("invalid_payment_type", "Payment type must be MONEY or TOKEN")
+                )
+            }
+            
+            if (result.success && meterPaymentRepository != null) {
+                // Record the payment in database
+                val payment = if (request.mpesaTransactionId != null) {
+                    // Payment with MPesa
+                    val mpesaTransactionId = UUID.fromString(request.mpesaTransactionId)
+                    meterPaymentRepository.createPayment(
+                        userId = UUID.fromString(request.userId ?: call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString() ?: return@post call.respond(HttpStatusCode.BadRequest)),
+                        meterId = UUID.fromString(id),
+                        mpesaTransactionId = mpesaTransactionId,
+                        amount = BigDecimal(request.amount.toString()),
+                        description = request.description ?: "Payment via MPesa"
+                    )
+                } else {
+                    // Direct payment
+                    meterPaymentRepository.createDirectPayment(
+                        meterId = UUID.fromString(id),
+                        amount = BigDecimal(request.amount.toString()),
+                        description = request.description ?: "Direct payment",
+                        balanceBefore = BigDecimal(balanceBefore.toString()),
+                        balanceAfter = result.additionalData?.get("balanceAfter")?.toString()?.toBigDecimalOrNull(),
+                        unitsAdded = result.additionalData?.get("unitsAdded")?.toString()?.toBigDecimalOrNull()
+                    )
+                }
+                
+                // Update payment status to reflect successful Tuya transaction
+                meterPaymentRepository.updatePaymentStatus(
+                    paymentId = UUID.fromString(payment.id),
+                    status = "COMPLETED",
+                    unitsAdded = result.additionalData?.get("unitsAdded")?.toString()?.toBigDecimalOrNull(),
+                    balanceBefore = BigDecimal(balanceBefore.toString()),
+                    balanceAfter = result.additionalData?.get("balanceAfter")?.toString()?.toBigDecimalOrNull()
+                )
+                
+                call.respond(mapOf(
+                    "success" to true,
+                    "message" to result.message,
+                    "payment" to payment
+                ))
+            } else {
+                call.respond(mapOf(
+                    "success" to result.success,
+                    "message" to result.message,
+                    "result" to result
+                ))
+            }
+            
+        } catch (e: Exception) {
+            println("❌ Error processing payment: ${e.message}")
+            e.printStackTrace()
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                ErrorResponse("payment_error", e.message ?: "Failed to process payment")
+            )
+        }
+    }
+    
+    // Get meter payment history
+    get("/devices/{id}/payments") {
+        val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+        
+        try {
+            // Check if device exists
+            val device = meterRepository.findById(id)
+            if (device == null) {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse("device_not_found", "Device not found"))
+                return@get
+            }
+            
+            // Check if meterPaymentRepository is available
+            if (meterPaymentRepository == null) {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse("payment_repository_unavailable", "Payment repository not available"))
+                return@get
+            }
+            
+            val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 50
+            
+            val payments = meterPaymentRepository.getPaymentsByMeterId(UUID.fromString(id)).take(limit)
+            
+            call.respond(mapOf(
+                "meterId" to id,
+                "meterName" to device.name,
+                "payments" to payments,
+                "count" to (payments?.size ?: 0)
+            ))
+            
+        } catch (e: Exception) {
+            println("❌ Error fetching payment history: ${e.message}")
+            e.printStackTrace()
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                ErrorResponse("payment_history_error", e.message ?: "Failed to fetch payment history")
+            )
+        }
+    }
+    
+    // Get meter billing information
+    get("/devices/{id}/billing") {
+        val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+        
+        try {
+            // Check if device exists
+            val device = meterRepository.findById(id)
+            if (device == null) {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse("device_not_found", "Device not found"))
+                return@get
+            }
+            
+            // Connect to Tuya Cloud
+            val connected = smartMeterService.connect()
+            if (!connected) {
+                call.respond(
+                    HttpStatusCode.ServiceUnavailable,
+                    ErrorResponse("connection_error", "Failed to connect to Tuya Cloud")
+                )
+                return@get
+            }
+            
+            val balance = smartMeterService.getRemainingBalance(device.deviceId)
+            val usage = smartMeterService.getEnergyUsage(device.deviceId)
+            
+            // Get last payment if repository is available
+            val lastPayment = if (meterPaymentRepository != null) {
+                meterPaymentRepository.getPaymentsByMeterId(UUID.fromString(id)).firstOrNull()
+            } else {
+                null
+            }
+            
+            call.respond(mapOf(
+                "meterId" to id,
+                "meterName" to device.name,
+                "deviceId" to device.deviceId,
+                "balance" to balance,
+                "usage" to usage,
+                "lastPayment" to lastPayment
+            ))
+            
+        } catch (e: Exception) {
+            println("❌ Error fetching billing information: ${e.message}")
+            e.printStackTrace()
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                ErrorResponse("billing_info_error", e.message ?: "Failed to fetch billing information")
+            )
+        }
+    }
+    
+    // Set meter rate (price per unit)
+    post("/devices/{id}/set-rate") {
+        val id = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+        
+        try {
+            // Check if device exists
+            val device = meterRepository.findById(id)
+            if (device == null) {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse("device_not_found", "Device not found"))
+                return@post
+            }
+            
+            val request = call.receive<SetPriceRequest>()
+            
+            // Connect to Tuya Cloud
+            val connected = smartMeterService.connect()
+            if (!connected) {
+                call.respond(
+                    HttpStatusCode.ServiceUnavailable,
+                    ErrorResponse("connection_error", "Failed to connect to Tuya Cloud")
+                )
+                return@post
+            }
+            
+            val result = smartMeterService.setUnitPrice(
+                deviceId = device.deviceId, 
+                price = request.price,
+                currencySymbol = request.currencySymbol
+            )
+            
+            call.respond(result)
+            
+        } catch (e: Exception) {
+            println("❌ Error setting meter rate: ${e.message}")
+            e.printStackTrace()
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                ErrorResponse("rate_setting_error", e.message ?: "Failed to set meter rate")
             )
         }
     }

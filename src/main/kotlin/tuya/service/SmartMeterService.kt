@@ -129,9 +129,13 @@ class SmartMeterService(
             command = "charge_money"
         )
         
+        // Get current balance first
+        val currentBalance = getRemainingBalance(deviceId)
+        val balanceBefore = currentBalance.moneyBalance ?: 0.0
+        
         val success = client.sendCommand(deviceId, "charge_money", JsonPrimitive(amount))
         
-        return CommandResponse(
+        val result = CommandResponse(
             success = success,
             message = if (success) {
                 "Added ${amount} money units to ${device.name ?: "device"}"
@@ -142,6 +146,20 @@ class SmartMeterService(
             command = "charge_money",
             value = JsonPrimitive(amount)
         )
+        
+        // If successful, get the new balance
+        if (success) {
+            // Wait a moment for the device to update
+            kotlinx.coroutines.delay(1000)
+            val newBalance = getRemainingBalance(deviceId)
+            result.additionalData = mapOf(
+                "balanceBefore" to balanceBefore,
+                "balanceAfter" to (newBalance.moneyBalance ?: 0.0),
+                "unitsAdded" to amount
+            )
+        }
+        
+        return result
     }
     
     // Add Energy Units (charge_token)
@@ -153,9 +171,13 @@ class SmartMeterService(
             command = "charge_token"
         )
         
+        // Get current energy balance first
+        val currentBalance = getRemainingBalance(deviceId)
+        val balanceBefore = currentBalance.energyBalance ?: 0.0
+        
         val success = client.sendCommand(deviceId, "charge_token", JsonPrimitive(token))
         
-        return CommandResponse(
+        val result = CommandResponse(
             success = success,
             message = if (success) {
                 "Token applied successfully to ${device.name ?: "device"}"
@@ -166,6 +188,20 @@ class SmartMeterService(
             command = "charge_token",
             value = JsonPrimitive(token)
         )
+        
+        // If successful, get the new balance
+        if (success) {
+            // Wait a moment for the device to update
+            kotlinx.coroutines.delay(1000)
+            val newBalance = getRemainingBalance(deviceId)
+            result.additionalData = mapOf(
+                "balanceBefore" to balanceBefore,
+                "balanceAfter" to (newBalance.energyBalance ?: 0.0),
+                "unitsAdded" to (newBalance.energyBalance?.minus(balanceBefore) ?: 0.0)
+            )
+        }
+        
+        return result
     }
     
     // Set Energy Charge Rate

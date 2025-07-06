@@ -96,7 +96,8 @@ data class CommandResponse(
     val message: String,
     val deviceId: String,
     val command: String,
-    val value: JsonElement? = null
+    val value: JsonElement? = null,
+    var additionalData: Map<String, Any>? = null
 )
 
 // Additional models for billing operations
