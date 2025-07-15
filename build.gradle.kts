@@ -1,5 +1,6 @@
 val kotlin_version: String by project
 val logback_version: String by project
+val koin_version = "3.5.3"
 
 plugins {
     kotlin("jvm") version "2.1.10"
@@ -35,6 +36,11 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:$logback_version")
     implementation("io.ktor:ktor-server-config-yaml")
     
+    // Koin for dependency injection
+    implementation("io.insert-koin:koin-core:$koin_version")
+    implementation("io.insert-koin:koin-ktor:$koin_version")
+    implementation("io.insert-koin:koin-logger-slf4j:$koin_version")
+
     // Environment variable loading from .env
     implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
     
