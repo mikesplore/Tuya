@@ -1,45 +1,97 @@
 package com.mike.domain.model.mpesa
 
-import com.google.gson.annotations.SerializedName
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.javatime.datetime
 import java.math.BigDecimal
+import java.time.LocalDateTime
+
+object MpesaTransactions : Table() {
+    val id = integer("id").autoIncrement()
+    val merchantRequestId = varchar("merchant_request_id", 100).nullable()
+    val checkoutRequestId = varchar("checkout_request_id", 100).nullable()
+    val responseCode = varchar("response_code", 20).nullable()
+    val responseDescription = varchar("response_description", 255).nullable()
+    val customerMessage = varchar("customer_message", 255).nullable()
+    val amount = decimal("amount", 10, 2)
+    val phoneNumber = varchar("phone_number", 20)
+    val mpesaReceiptNumber = varchar("mpesa_receipt_number", 100).nullable()
+    val transactionDate = datetime("transaction_date").nullable()
+    val status = varchar("status", 50)
+    val callbackReceived = bool("callback_received").default(false)
+    val createdAt = datetime("created_at")
+    val updatedAt = datetime("updated_at")
+    override val primaryKey = PrimaryKey(id)
+}
+
+data class MpesaTransaction(
+    val id: Int? = null,
+    val merchantRequestId: String? = null,
+    val checkoutRequestId: String? = null,
+    val responseCode: String? = null,
+    val responseDescription: String? = null,
+    val customerMessage: String? = null,
+    val amount: BigDecimal,
+    val phoneNumber: String,
+    val mpesaReceiptNumber: String? = null,
+    val transactionDate: LocalDateTime? = null,
+    val status: String,
+    val callbackReceived: Boolean = false,
+    val createdAt: LocalDateTime,
+    val updatedAt: LocalDateTime
+)
+
+
+data class MpesaTransactionCreateRequest(
+    val amount: BigDecimal,
+    val phoneNumber: String,
+    val merchantRequestId: String? = null,
+    val checkoutRequestId: String? = null,
+    val responseCode: String? = null,
+    val responseDescription: String? = null,
+    val customerMessage: String? = null
+)
+
+data class MpesaTransactionCallbackUpdate(
+    val checkoutRequestId: String,
+    val resultCode: String,
+    val resultDesc: String,
+    val mpesaReceiptNumber: String?,
+    val transactionDate: LocalDateTime?
+)
+
+data class MpesaTransactionTimeoutUpdate(
+    val checkoutRequestId: String,
+    val resultDesc: String = "Transaction timed out waiting for callback"
+)
+
+data class MpesaTransactionQueryUpdate(
+    val checkoutRequestId: String,
+    val resultCode: String,
+    val resultDesc: String
+)
 
 // STK Push request model
 data class StkPushRequest(
-    @SerializedName("BusinessShortCode")
     val businessShortCode: String,
-    @SerializedName("Password")
     val password: String,
-    @SerializedName("Timestamp")
     val timestamp: String,
-    @SerializedName("TransactionType")
     val transactionType: String = "CustomerPayBillOnline",
-    @SerializedName("Amount")
     val amount: BigDecimal,
-    @SerializedName("PartyA")
     val partyA: String, // Phone number
-    @SerializedName("PartyB")
     val partyB: String, // Shortcode
-    @SerializedName("PhoneNumber")
     val phoneNumber: String,
-    @SerializedName("CallBackURL")
     val callBackURL: String,
-    @SerializedName("AccountReference")
     val accountReference: String,
-    @SerializedName("TransactionDesc")
     val transactionDesc: String
 )
 
 // STK Push response model
 data class StkPushResponse(
-    @SerializedName("MerchantRequestID")
     val merchantRequestID: String?,
-    @SerializedName("CheckoutRequestID")
     val checkoutRequestID: String?,
-    @SerializedName("ResponseCode")
     val responseCode: String?,
-    @SerializedName("ResponseDescription")
     val responseDescription: String?,
-    @SerializedName("CustomerMessage")
     val customerMessage: String?
 )
 
@@ -56,37 +108,27 @@ data class AccessTokenResponse(
 
 // Callback models
 data class StkCallback(
-    @SerializedName("MerchantRequestID")
     val merchantRequestID: String,
-    @SerializedName("CheckoutRequestID")
     val checkoutRequestID: String,
-    @SerializedName("ResultCode")
     val resultCode: Int,
-    @SerializedName("ResultDesc")
     val resultDesc: String,
-    @SerializedName("CallbackMetadata")
     val callbackMetadata: CallbackMetadata? = null // This can be null for failed transactions
 )
 
 data class CallbackMetadata(
-    @SerializedName("Item")
     val item: List<CallbackItem>
 )
 
 data class CallbackItem(
-    @SerializedName("Name")
     val name: String,
-    @SerializedName("Value")
     val value: Any?
 )
 
 data class StkCallbackResponse(
-    @SerializedName("Body")
     val body: StkCallbackBody
 )
 
 data class StkCallbackBody(
-    @SerializedName("stkCallback")
     val stkCallback: StkCallback
 )
 
@@ -105,3 +147,32 @@ data class PaymentResponse(
     val checkoutRequestId: String?,
     val mpesaTransactionId: String?
 )
+
+
+data class MpesaConfig(
+    val consumerKey: String,
+    val consumerSecret: String,
+    val shortCode: String,
+    val passkey: String, // Sandbox passkey
+    val baseUrl: String,
+    val callbackUrl: String // Default callback URL
+)
+
+
+fun toMpesaTransaction(row: ResultRow): MpesaTransaction =
+    MpesaTransaction(
+        id = row[MpesaTransactions.id],
+        merchantRequestId = row[MpesaTransactions.merchantRequestId],
+        checkoutRequestId = row[MpesaTransactions.checkoutRequestId],
+        responseCode = row[MpesaTransactions.responseCode],
+        responseDescription = row[MpesaTransactions.responseDescription],
+        customerMessage = row[MpesaTransactions.customerMessage],
+        amount = row[MpesaTransactions.amount],
+        phoneNumber = row[MpesaTransactions.phoneNumber],
+        mpesaReceiptNumber = row[MpesaTransactions.mpesaReceiptNumber],
+        transactionDate = row[MpesaTransactions.transactionDate],
+        status = row[MpesaTransactions.status],
+        callbackReceived = row[MpesaTransactions.callbackReceived],
+        createdAt = row[MpesaTransactions.createdAt],
+        updatedAt = row[MpesaTransactions.updatedAt]
+    )

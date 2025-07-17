@@ -1,106 +1,212 @@
 package com.mike.domain.repository.user
 
-import at.favre.lib.crypto.bcrypt.BCrypt
-import com.mike.database.tables.Users
-import com.mike.domain.model.user.User
-import com.mike.domain.model.user.UserDto
+import com.mike.domain.model.user.*
+import com.mike.domain.repository.auth.AuthRepository
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
-import java.util.UUID
 
-class UserRepositoryImpl : UserRepository {
+class UserRepositoryImpl(
+    private val authRepository: AuthRepository
+) : UserRepository {
 
-    override fun findByEmail(email: String): UserDto? = transaction {
-        User.Companion.find { Users.email eq email }
-            .singleOrNull()
-            ?.toUserDto()
-    }
-
-    override fun findById(id: String): UserDto? = transaction {
-        User.Companion.findById(UUID.fromString(id))?.toUserDto()
-    }
-
-    override fun getAllUsers(): List<UserDto> = transaction {
-        User.Companion.all().map { it.toUserDto() }
-    }
-
-    override fun createUser(
-        email: String, 
-        password: String, 
-        firstName: String?, 
-        lastName: String?,
-        phoneNumber: String?, 
-        role: String
-    ): UserDto = transaction {
-        val passwordHash = hashPassword(password)
-        val now = LocalDateTime.now()
-
-        User.Companion.new {
-            this.email = email
-            this.phoneNumber = phoneNumber
-            this.passwordHash = passwordHash
-            this.firstName = firstName
-            this.lastName = lastName
-            this.role = role
-            this.active = true
-            this.createdAt = now
-            this.updatedAt = now
-        }.toUserDto()
-    }
-
-    override fun updateUser(
-        id: String, 
-        email: String?, 
-        firstName: String?, 
-        lastName: String?,
-        phoneNumber: String?, 
-        role: String?, 
-        active: Boolean?
-    ): UserDto? = transaction {
-        val user = User.Companion.findById(UUID.fromString(id)) ?: return@transaction null
-
-        email?.let { user.email = it }
-        firstName?.let { user.firstName = it }
-        lastName?.let { user.lastName = it }
-        phoneNumber?.let { user.phoneNumber = it }
-        role?.let { user.role = it }
-        active?.let { user.active = it }
-        user.updatedAt = LocalDateTime.now()
-
-        user.toUserDto()
-    }
-
-    override fun changePassword(id: String, newPassword: String): Boolean = transaction {
-        val user = User.Companion.findById(UUID.fromString(id)) ?: return@transaction false
-
-        user.passwordHash = hashPassword(newPassword)
-        user.updatedAt = LocalDateTime.now()
-
-        true
-    }
-
-    override fun deleteUser(id: String): Boolean = transaction {
-        val user = User.Companion.findById(UUID.fromString(id)) ?: return@transaction false
-        user.delete()
-        true
-    }
-
-    override fun validateCredentials(email: String, password: String): UserDto? = transaction {
-        val user = User.Companion.find { Users.email eq email }.singleOrNull() ?: return@transaction null
-
-        if (verifyPassword(password, user.passwordHash)) {
-            user.toUserDto()
-        } else {
+    override fun findByEmail(email: String): User? = transaction {
+        try {
+            (Users innerJoin Profiles)
+                .selectAll().where { Users.email eq email }
+                .singleOrNull()
+                ?.let { resultRow ->
+                    mapToUser(resultRow)
+                }
+        } catch (e: Exception) {
+            println("Error finding user by email: ${e.message}")
             null
         }
     }
 
-    private fun hashPassword(password: String): String {
-        return BCrypt.withDefaults().hashToString(12, password.toCharArray())
+    override fun findById(userId: Int): User? = transaction {
+        try {
+            (Users innerJoin Profiles)
+                .selectAll().where { Users.userId eq userId }
+                .singleOrNull()
+                ?.let { resultRow ->
+                    mapToUser(resultRow)
+                }
+        } catch (e: Exception) {
+            println("Error finding user by ID: ${e.message}")
+            null
+        }
     }
 
-    private fun verifyPassword(password: String, hashedPassword: String): Boolean {
-        val result = BCrypt.verifyer().verify(password.toCharArray(), hashedPassword)
-        return result.verified
+    override fun fundUserProfile(userId: Int): Profile? = transaction {
+        try {
+            (Profiles innerJoin Users)
+                .selectAll().where { Profiles.userId eq userId }
+                .singleOrNull()
+                ?.let { resultRow ->
+                    mapToProfile(resultRow)
+                }
+        } catch (e: Exception) {
+            println("Error finding user profile: ${e.message}")
+            null
+        }
+    }
+
+    override fun findUserRole(userId: Int): String? = transaction {
+        try {
+            Users.selectAll().where { Users.userId eq userId }
+                .singleOrNull()?.get(Users.role)
+        } catch (e: Exception) {
+            println("Error finding user role: ${e.message}")
+            null
+        }
+    }
+
+    override fun getAllUsers(): List<Profile> = transaction {
+        try {
+            (Profiles innerJoin Users)
+                .selectAll()
+                .map { resultRow ->
+                    mapToProfile(resultRow)
+                }
+        } catch (e: Exception) {
+            println("Error retrieving all users: ${e.message}")
+            emptyList()
+        }
+    }
+
+    override fun createUser(user: RegisterRequest): Pair<Boolean, String?> = transaction {
+        try {
+            val existingUser = Users.selectAll().where { Users.email eq user.email }.singleOrNull()
+            if (existingUser != null) {
+                return@transaction Pair(false, "User with email ${user.email} already exists")
+            }
+            if (user.email.isBlank()) {
+                return@transaction Pair(false, "Email is required")
+            }
+            if (user.password.isBlank()) {
+                return@transaction Pair(false, "Password is required")
+            }
+            val now = LocalDateTime.now()
+            val userId = Users.insert {
+                it[email] = user.email
+                it[passwordHash] = authRepository.hashPassword(user.password)
+                it[role] = "USER"
+            } get Users.userId
+            Profiles.insert {
+                it[Profiles.userId] = userId
+                it[firstName] = user.firstName
+                it[lastName] = user.lastName
+                it[phoneNumber] = user.phoneNumber
+                it[email] = user.email
+                it[createdAt] = now
+                it[updatedAt] = now
+            }
+            Pair(true, null)
+        } catch (e: Exception) {
+            Pair(false, "Failed to create user: ${e.message}")
+        }
+    }
+
+    override fun updateUser(updatedUser: Profile): Pair<Boolean, String?> = transaction {
+        try {
+            Users.selectAll().where { Users.userId eq updatedUser.userId }
+                .singleOrNull() ?: return@transaction Pair(false, "User not found")
+            Profiles.update({ Profiles.userId eq updatedUser.userId }) {
+                it[firstName] = updatedUser.firstName
+                it[lastName] = updatedUser.lastName
+                it[phoneNumber] = updatedUser.phoneNumber
+                it[updatedAt] = LocalDateTime.now()
+            }
+            Pair(true, null)
+        } catch (e: Exception) {
+            Pair(false, "Failed to update user: ${e.message}")
+        }
+    }
+
+    override fun deleteUser(userId: Int): Pair<Boolean, String?> = transaction {
+        try {
+            Users.selectAll().where { Users.userId eq userId }
+                .singleOrNull() ?: return@transaction Pair(false, "User not found")
+            ProfilePictures.deleteWhere { ProfilePictures.userId eq userId }
+            Profiles.deleteWhere { Profiles.userId eq userId }
+            Users.deleteWhere { Users.userId eq userId }
+            Pair(true, null)
+        } catch (e: Exception) {
+            Pair(false, "Failed to delete user: ${e.message}")
+        }
+    }
+
+    override fun uploadProfilePicture(userId: Int, pictureUrl: String): Pair<Boolean, String?> = transaction {
+        try {
+            Users.selectAll().where { Users.userId eq userId }
+                .singleOrNull() ?: return@transaction Pair(false, "User not found")
+            val now = LocalDateTime.now()
+            val existingPicture = ProfilePictures.selectAll().where { ProfilePictures.userId eq userId }.singleOrNull()
+            if (existingPicture != null) {
+                ProfilePictures.update({ ProfilePictures.userId eq userId }) {
+                    it[ProfilePictures.pictureUrl] = pictureUrl
+                    it[updatedAt] = now
+                }
+            } else {
+                ProfilePictures.insert {
+                    it[ProfilePictures.userId] = userId
+                    it[ProfilePictures.pictureUrl] = pictureUrl
+                    it[createdAt] = now
+                    it[updatedAt] = now
+                }
+            }
+            Pair(true, null)
+        } catch (e: Exception) {
+            Pair(false, "Failed to upload profile picture: ${e.message}")
+        }
+    }
+
+    override fun getProfilePicture(userId: Int): ProfilePicture? = transaction {
+        try {
+            ProfilePictures.selectAll().where { ProfilePictures.userId eq userId }
+                .singleOrNull()
+                ?.let { resultRow ->
+                    ProfilePicture(
+                        userId = resultRow[ProfilePictures.userId],
+                        pictureUrl = resultRow[ProfilePictures.pictureUrl],
+                        createdAt = resultRow[ProfilePictures.createdAt],
+                        updatedAt = resultRow[ProfilePictures.updatedAt]
+                    )
+                }
+        } catch (e: Exception) {
+            println("Error retrieving profile picture: ${e.message}")
+            null
+        }
+    }
+
+    private fun mapToUser(row: ResultRow): User {
+        return User(
+            id = row[Users.userId],
+            email = row[Users.email],
+            passwordHash = row[Users.passwordHash],
+            role = row[Users.role],
+            active = true, // Assuming users are active by default
+        )
+    }
+
+    private val mapToProfile: (row: ResultRow) -> Profile = { row ->
+        val profilePicture = ProfilePictures
+            .selectAll().where { ProfilePictures.userId eq row[Users.userId] }
+            .singleOrNull()
+            ?.let { it[ProfilePictures.pictureUrl] }
+        Profile(
+            userId = row[Users.userId],
+            email = row[Users.email],
+            firstName = row[Profiles.firstName],
+            lastName = row[Profiles.lastName],
+            phoneNumber = row[Profiles.phoneNumber],
+            userRole = row[Users.role],
+            createdAt = row[Profiles.createdAt],
+            updatedAt = row[Profiles.updatedAt],
+            profilePictureUrl = profilePicture
+        )
     }
 }

@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
 
 fun main() {
     val logger = LoggerFactory.getLogger("DatabaseInit")
-    logger.info("Starting database initialization...")
+    //logger.info("Starting database initialization...")
     
     // Load .env file if it exists
     val dotenv = dotenv {
@@ -26,7 +26,7 @@ fun main() {
         // Initialize the database connection
         DatabaseFactory.init(config)
         
-        logger.info("Database initialization completed successfully")
+       // logger.info("Database initialization completed successfully")
     } catch (e: Exception) {
         logger.error("Error initializing database: ${e.message}", e)
     }

@@ -1,122 +1,137 @@
 package com.mike.domain.repository.meter
 
-import com.mike.domain.model.mpesa.MpesaTransaction
-import com.mike.domain.model.user.User
-import com.mike.database.tables.MeterPayments
-import com.mike.domain.model.meter.Meter
 import com.mike.domain.model.meter.MeterPayment
-import com.mike.domain.model.meter.MeterPaymentDto
-import org.jetbrains.exposed.sql.SortOrder
+import com.mike.domain.model.meter.MeterPayments
+import com.mike.domain.model.meter.Meters
+import com.mike.domain.model.mpesa.MpesaTransactions
+import com.mike.domain.model.user.Users
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.util.UUID
 
-class MeterPaymentRepositoryImpl: MeterPaymentRepository {
+class MeterPaymentRepositoryImpl : MeterPaymentRepository {
 
-    override suspend fun createPayment(
-        userId: String,
-        meterId: String,
-        mpesaTransactionId: String,
-        amount: Double,
-        description: String?
-    ): MeterPaymentDto = transaction {
+    override suspend fun createPayment(meterPayment: MeterPayment) { transaction {
         val now = LocalDateTime.now()
-        val user = User.Companion.findById(UUID.fromString(userId)) ?: throw IllegalArgumentException("User not found")
-        val meter = Meter.Companion.findById(UUID.fromString(meterId)) ?: throw IllegalArgumentException("Meter not found")
-        val mpesaTransaction = MpesaTransaction.Companion.findById(UUID.fromString(mpesaTransactionId))
-            ?: throw IllegalArgumentException("M-Pesa transaction not found")
 
-        val payment = MeterPayment.Companion.new {
-            this.user = user
-            this.meter = meter
-            this.mpesaTransaction = mpesaTransaction
-            this.amount = BigDecimal.valueOf(amount)
-            this.paymentDate = now
-            this.status = "PENDING"
-            this.description = description
-            this.createdAt = now
-            this.updatedAt = now
+        // Verify meter exists
+        Meters.selectAll().where { Meters.deviceId eq meterPayment.meterId }
+            .singleOrNull() ?: throw IllegalArgumentException("Meter not found")
+
+        // Verify user exists if userId is provided
+        if (meterPayment.userId != null) {
+            Users.selectAll().where { Users.userId eq meterPayment.userId }
+                .singleOrNull() ?: throw IllegalArgumentException("User not found")
         }
-        payment.toDto()
-    }
 
-    override suspend fun updatePaymentStatus(
-        paymentId: String,
-        status: String,
-        unitsAdded: Double?,
-        balanceBefore: Double?,
-        balanceAfter: Double?
-    ): MeterPaymentDto? = transaction {
-        val payment = MeterPayment.Companion.findById(UUID.fromString(paymentId))
-        payment?.let {
-            it.status = status
-            it.unitsAdded = unitsAdded?.let { BigDecimal.valueOf(it) }
-            it.balanceBefore = balanceBefore?.let { BigDecimal.valueOf(it) }
-            it.balanceAfter = balanceAfter?.let { BigDecimal.valueOf(it) }
-            it.updatedAt = LocalDateTime.now()
-            it.toDto()
+        // Verify mpesa transactions exist if mpesaTransactionId is provided
+        if (meterPayment.mpesaTransactionId != null) {
+            MpesaTransactions.selectAll().where { MpesaTransactions.id eq meterPayment.mpesaTransactionId }
+                .singleOrNull() ?: throw IllegalArgumentException("M-Pesa transaction not found")
         }
+
+        MeterPayments.insert {
+            it[userId] = meterPayment.userId
+            it[meterId] = meterPayment.meterId
+            it[mpesaTransactionId] = meterPayment.mpesaTransactionId
+            it[amount] = meterPayment.amount
+            it[unitsAdded] = meterPayment.unitsAdded
+            it[balanceBefore] = meterPayment.balanceBefore
+            it[balanceAfter] = meterPayment.balanceAfter
+            it[paymentDate] = meterPayment.paymentDate
+            it[status] = meterPayment.status
+            it[description] = meterPayment.description
+            it[createdAt] = now
+            it[updatedAt] = now
+        }
+    }}
+
+    override suspend fun updatePaymentStatus(meterPayment: MeterPayment) { transaction {
+        meterPayment.id?.let {
+        MeterPayments.update({ MeterPayments.id eq meterPayment.id }) {
+            it[status] = meterPayment.status
+            it[unitsAdded] = meterPayment.unitsAdded
+            it[balanceBefore] = meterPayment.balanceBefore
+            it[balanceAfter] = meterPayment.balanceAfter
+            it[updatedAt] = LocalDateTime.now()
+        }}
+    }}
+
+    override suspend fun getPaymentById(id: Int): MeterPayment? = transaction {
+        MeterPayments.selectAll().where { MeterPayments.id eq id }
+            .singleOrNull()?.let { mapToMeterPayment(it) }
     }
 
-    override suspend fun getPaymentById(id: String): MeterPaymentDto? = transaction {
-        MeterPayment.Companion.findById(UUID.fromString(id))?.toDto()
+    override suspend fun getPaymentsByUserId(userId: Int): List<MeterPayment> = transaction {
+        MeterPayments.selectAll().where { MeterPayments.userId eq userId }
+            .map { mapToMeterPayment(it) }
     }
 
-    override suspend fun getPaymentsByUserId(userId: String): List<MeterPaymentDto> = transaction {
-        MeterPayment.Companion.find { MeterPayments.userId eq UUID.fromString(userId) }.map { it.toDto() }
+    override suspend fun getPaymentsByMeterId(meterId: String): List<MeterPayment> = transaction {
+        MeterPayments.selectAll().where { MeterPayments.meterId eq meterId }
+            .map { mapToMeterPayment(it) }
     }
 
-    override suspend fun getPaymentsByMeterId(meterId: String): List<MeterPaymentDto> = transaction {
-        MeterPayment.Companion.find { MeterPayments.meterId eq UUID.fromString(meterId) }.map { it.toDto() }
+    override suspend fun getPaymentsByStatus(status: String): List<MeterPayment> = transaction {
+        MeterPayments.selectAll().where { MeterPayments.status eq status }
+            .map { mapToMeterPayment(it) }
     }
 
-    override suspend fun getPaymentsByStatus(status: String): List<MeterPaymentDto> = transaction {
-        MeterPayment.Companion.find { MeterPayments.status eq status }.map { it.toDto() }
+    override suspend fun getPaymentsByMpesaTransactionId(mpesaTransactionId: Int): MeterPayment? = transaction {
+        MeterPayments.selectAll().where { MeterPayments.mpesaTransactionId eq mpesaTransactionId }
+            .firstOrNull()?.let { mapToMeterPayment(it) }
     }
 
-    override suspend fun getPaymentsByMpesaTransactionId(mpesaTransactionId: String): MeterPaymentDto? = transaction {
-        MeterPayment.Companion.find {
-            MeterPayments.mpesaTransactionId eq UUID.fromString(mpesaTransactionId)
-        }.firstOrNull()?.toDto()
+    override suspend fun getAllPayments(): List<MeterPayment> = transaction {
+        MeterPayments.selectAll()
+            .map { mapToMeterPayment(it) }
     }
 
-    override suspend fun getAllPayments(): List<MeterPaymentDto> = transaction {
-        MeterPayment.Companion.all().map { it.toDto() }
-    }
-
-    override suspend fun getUserPaymentHistory(userId: String, limit: Int): List<MeterPaymentDto> = transaction {
-        MeterPayment.Companion.find { MeterPayments.userId eq UUID.fromString(userId) }
+    override suspend fun getUserPaymentHistory(userId: Int, limit: Int): List<MeterPayment> = transaction {
+        MeterPayments.selectAll().where { MeterPayments.userId eq userId }
             .orderBy(MeterPayments.paymentDate to SortOrder.DESC)
             .limit(limit)
-            .map { it.toDto() }
+            .map { mapToMeterPayment(it) }
     }
 
-    override suspend fun createDirectPayment(
-        meterId: String,
-        amount: Double,
-        description: String?,
-        balanceBefore: Double?,
-        balanceAfter: Double?,
-        unitsAdded: Double?
-    ): MeterPaymentDto = transaction {
+    override suspend fun createDirectPayment(meterPayment: MeterPayment) { transaction {
         val now = LocalDateTime.now()
-        val meter = Meter.Companion.findById(UUID.fromString(meterId)) ?: throw IllegalArgumentException("Meter not found")
 
-        val payment = MeterPayment.Companion.new {
-            this.user = null
-            this.meter = meter
-            this.mpesaTransaction = null
-            this.amount = BigDecimal.valueOf(amount)
-            this.paymentDate = now
-            this.status = "COMPLETED"
-            this.description = description ?: "Direct payment"
-            this.balanceBefore = balanceBefore?.let { BigDecimal.valueOf(it) }
-            this.balanceAfter = balanceAfter?.let { BigDecimal.valueOf(it) }
-            this.unitsAdded = unitsAdded?.let { BigDecimal.valueOf(it) }
-            this.createdAt = now
-            this.updatedAt = now
+        // Verify meter exists
+        Meters.selectAll().where { Meters.deviceId eq meterPayment.meterId }
+            .singleOrNull() ?: throw IllegalArgumentException("Meter not found")
+
+        MeterPayments.insert {
+            it[userId] = null // Direct payments don't have a user
+            it[meterId] = meterPayment.meterId
+            it[mpesaTransactionId] = null // Direct payments don't have an mpesa transaction
+            it[amount] = meterPayment.amount
+            it[unitsAdded] = meterPayment.unitsAdded
+            it[balanceBefore] = meterPayment.balanceBefore
+            it[balanceAfter] = meterPayment.balanceAfter
+            it[paymentDate] = meterPayment.paymentDate
+            it[status] = "COMPLETED" // Direct payments are always completed
+            it[description] = meterPayment.description ?: "Direct payment"
+            it[createdAt] = now
+            it[updatedAt] = now
         }
-        payment.toDto()
+    }}
+
+    private fun mapToMeterPayment(row: ResultRow): MeterPayment {
+        return MeterPayment(
+            id = row[MeterPayments.id],
+            userId = row[MeterPayments.userId],
+            meterId = row[MeterPayments.meterId],
+            mpesaTransactionId = row[MeterPayments.mpesaTransactionId],
+            amount = row[MeterPayments.amount],
+            unitsAdded = row[MeterPayments.unitsAdded],
+            balanceBefore = row[MeterPayments.balanceBefore],
+            balanceAfter = row[MeterPayments.balanceAfter],
+            paymentDate = row[MeterPayments.paymentDate],
+            status = row[MeterPayments.status],
+            description = row[MeterPayments.description],
+            createdAt = row[MeterPayments.createdAt],
+            updatedAt = row[MeterPayments.updatedAt]
+        )
     }
 }

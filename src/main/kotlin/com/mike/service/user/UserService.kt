@@ -1,100 +1,85 @@
 package com.mike.service.user
 
-import com.mike.domain.model.meter.MeterDto
-import com.mike.domain.model.user.UserDto
-import com.mike.domain.model.user.UserMeterAssignmentDto
+//import com.mike.domain.model.meter.Meter
+import com.mike.domain.model.user.*
 import com.mike.domain.repository.user.UserMeterAssignmentRepository
 import com.mike.domain.repository.user.UserRepository
+
 
 class UserService(
     private val userRepository: UserRepository,
     private val userMeterAssignmentRepository: UserMeterAssignmentRepository
 ) {
     // User management functions
-    fun getUserById(id: String): UserDto? {
+    fun getUserById(id: Int): User? {
         return userRepository.findById(id)
     }
     
-    fun getUserByEmail(email: String): UserDto? {
+    fun getUserByEmail(email: String): User? {
         return userRepository.findByEmail(email)
     }
     
-    fun getAllUsers(): List<UserDto> {
+    fun getAllUsers(): List<Profile> {
         return userRepository.getAllUsers()
     }
     
-    fun createUser(
-        email: String,
-        password: String,
-        firstName: String?,
-        lastName: String?,
-        phoneNumber: String? = null,
-        role: String = "USER"
-    ): UserDto {
-        return userRepository.createUser(
-            email = email,
-            password = password,
-            firstName = firstName,
-            lastName = lastName,
-            phoneNumber = phoneNumber,
-            role = role
-        )
+    fun createUser(registerRequest: RegisterRequest): Pair<Boolean, String?> {
+        return userRepository.createUser(registerRequest)
     }
     
-    fun updateUser(
-        id: String,
-        email: String? = null,
-        firstName: String? = null,
-        lastName: String? = null,
-        phoneNumber: String? = null,
-        role: String? = null,
-        active: Boolean? = null
-    ): UserDto? {
-        return userRepository.updateUser(
-            id = id,
-            email = email,
-            firstName = firstName,
-            lastName = lastName,
-            phoneNumber = phoneNumber,
-            role = role,
-            active = active
-        )
+    fun updateUser(profile: Profile): Pair<Boolean, String?> {
+        return userRepository.updateUser(profile)
     }
     
-    fun changePassword(id: String, newPassword: String): Boolean {
-        return userRepository.changePassword(id, newPassword)
-    }
+//    fun changePassword(id: String, newPassword: String): Pair<Boolean, String?> {
+//        return userRepository.changePassword(id, newPassword)
+//    }
     
-    fun deleteUser(id: String): Boolean {
+    fun deleteUser(id: Int): Pair<Boolean, String?> {
         return userRepository.deleteUser(id)
     }
     
-    fun authenticateUser(email: String, password: String): UserDto? {
-        return userRepository.validateCredentials(email, password)
-    }
+//    fun authenticateUser(loginCredentials: LoginCredentials): Pair<Boolean, String?> {
+//        return userRepository.validateCredentials(loginCredentials)
+//    }
     
-    // User-Meter assignment functions
-    fun assignMeterToUser(userId: String, meterId: String): UserMeterAssignmentDto {
-        return userMeterAssignmentRepository.assignMeterToUser(userId, meterId)
-    }
-    
-    fun removeMeterFromUser(userId: String, meterId: String): Boolean {
-        return userMeterAssignmentRepository.removeMeterFromUser(userId, meterId)
-    }
-    
-    fun getUserMeters(userId: String): List<MeterDto> {
-        return userMeterAssignmentRepository.getUserMeters(userId)
-    }
-    
-    fun getMeterUsers(meterId: String): List<UserDto> {
-        return userMeterAssignmentRepository.getMeterUsers(meterId)
-    }
-    
-    fun isMeterAssignedToUser(userId: String, meterId: String): Boolean {
-        return userMeterAssignmentRepository.isMeterAssignedToUser(userId, meterId)
-    }
-    
-    fun getAllMeterAssignments(): List<UserMeterAssignmentDto> {
-        return userMeterAssignmentRepository.getAllAssignments()
-    }
+//    // User-Meter assignment functions
+//    fun assignMeterToUser(userId: String, meterId: String): UserMeterAssignment {
+//        return userMeterAssignmentRepository.assignMeterToUser(userId, meterId)
+//    }
+//
+//    fun removeMeterFromUser(userId: String, meterId: String): Boolean {
+//        return userMeterAssignmentRepository.removeMeterFromUser(userId, meterId)
+//    }
+//
+//    fun getUserMeters(userId: String): List<Meter> {
+//        return userMeterAssignmentRepository.getUserMeters(userId)
+//    }
+//
+//    fun getMeterUsers(meterId: String): List<User> {
+//        return userMeterAssignmentRepository.getMeterUsers(meterId)
+//    }
+//
+//    fun isMeterAssignedToUser(userId: String, meterId: String): Boolean {
+//        return userMeterAssignmentRepository.isMeterAssignedToUser(userId, meterId)
+//    }
+//
+//    fun getAllMeterAssignments(): List<UserMeterAssignment> {
+//        return userMeterAssignmentRepository.getAllAssignments()
+//    }
+
+//    fun verifyToken(token: String): Pair<Boolean, Int?> =
+//        userRepository.verifyToken(token)
+//
+//    fun revokeAllUserRefreshTokens(userId: Int): Boolean =
+//        userRepository.revokeAllUserRefreshTokens(userId)
+//
+//    fun revokeRefreshToken(token: String): Boolean =
+//        userRepository.revokeRefreshToken(token)
+//
+//    fun getRefreshToken(token: String): RefreshToken? =
+//        userRepository.getRefreshToken(token)
+//
+//    fun createRefreshToken(userId: Int, expiresInDays: Int = 30): RefreshToken =
+//        userRepository.createRefreshToken(userId, expiresInDays)
 }

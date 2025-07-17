@@ -1,15 +1,20 @@
 package com.mike
 
+import com.mike.auth.JwtService
 import com.mike.database.DatabaseFactory
 import com.mike.di.appModule
 import com.mike.domain.repository.user.UserRepository
-import com.mike.service.meter.MeterService
-import com.mike.service.mpesa.MpesaService
+import com.mike.service.auth.AuthService
+//import com.mike.service.meter.MeterService
+//import com.mike.service.mpesa.MpesaService
 import com.mike.service.user.UserService
 import com.mike.tuya.service.SmartMeterService
 import io.github.cdimascio.dotenv.dotenv
 import io.ktor.server.application.*
+import io.ktor.server.auth.Authentication
 import io.ktor.server.plugins.calllogging.*
+import io.ktor.server.plugins.openapi.*
+import io.ktor.server.plugins.swagger.*
 import org.koin.core.context.startKoin
 import org.koin.ktor.ext.get
 import org.koin.logger.slf4jLogger
@@ -22,20 +27,28 @@ fun main(args: Array<String>) {
 fun Application.module() {
     // Initialize database
     DatabaseFactory.init(environment.config)
-    
+
     // Add call logging
     install(CallLogging) {
         level = Level.INFO
     }
 
+
     startKoin {
         slf4jLogger()
+        properties(mapOf("applicationConfig" to environment.config))
         modules(appModule)
     }
 
     val dotenv = dotenv {
         ignoreIfMissing = true
         directory = System.getProperty("user.dir")
+    }
+
+    val jwtService = get<JwtService>()
+    val appConfig = environment.config
+    install(Authentication) {
+        jwtService.configureJwtAuthentication(appConfig, this)
     }
 
     val accessId = dotenv["ACCESS_ID"]
@@ -45,12 +58,14 @@ fun Application.module() {
     val endpoint = dotenv["TUYA_ENDPOINT"]
 
     val userService = get<UserService>()
-    val meterService = get<MeterService>()
-    val mpesaService = get<MpesaService>()
+    val authService = get<AuthService>()
+//    val meterService = get<MeterService>()
+//    val mpesaService = get<MpesaService>()
     val userRepository = get<UserRepository>()
     val smartMeterService = SmartMeterService(accessId, accessSecret, endpoint = endpoint)
 
     configureSerialization()
-    configureSecurity(userRepository)
-    configureRouting(mpesaService, userService, meterService, smartMeterService)
+
+    //configureSecurity(userService)
+    configureRouting( userService,  smartMeterService, authService)
 }

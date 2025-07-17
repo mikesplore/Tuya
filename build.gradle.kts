@@ -61,6 +61,10 @@ dependencies {
     // XML Binding API (required for Java 9+)
     implementation("javax.xml.bind:jaxb-api:2.3.1")
     
+    // Swagger/OpenAPI documentation
+    implementation("io.ktor:ktor-server-openapi:3.2.0")
+    implementation("io.ktor:ktor-server-swagger:3.2.0")
+
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 }

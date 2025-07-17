@@ -1,10 +1,12 @@
 package com.mike
 
-import com.mike.routes.deviceRoutes
-import com.mike.routes.mpesaRoutes
-import com.mike.routes.userRoutes
-import com.mike.service.meter.MeterService
-import com.mike.service.mpesa.MpesaService
+//import com.mike.routes.deviceRoutes
+//import com.mike.routes.mpesaRoutes
+import com.mike.routes.authRoutes
+import com.mike.service.auth.AuthService
+//import com.mike.routes.userRoutes
+//import com.mike.service.meter.MeterService
+//import com.mike.service.mpesa.MpesaService
 import com.mike.service.user.UserService
 import com.mike.tuya.config.getTuyaConfig
 import com.mike.tuya.service.SmartMeterService
@@ -25,7 +27,7 @@ data class ErrorResponse(
     val message: String
 )
 
-fun Application.configureRouting(mpesaService: MpesaService, userService: UserService, meterService: MeterService, smartMeterService: SmartMeterService) {
+fun Application.configureRouting(userService: UserService,  smartMeterService: SmartMeterService, authService: AuthService) {
     // Install CORS
     install(CORS) {
         anyHost()
@@ -96,19 +98,20 @@ fun Application.configureRouting(mpesaService: MpesaService, userService: UserSe
         }
 
         // Device management routes (unprotected)
-        deviceRoutes(
-            meterService,
-            smartMeterService,
-        )
-
-        // Mpesa routes
-        mpesaRoutes(
-            mpesaService,
-            userService,
-            meterService
-        )
+//        deviceRoutes(
+//            meterService,
+//            smartMeterService,
+//        )
+//
+//        // Mpesa routes
+//        mpesaRoutes(
+//            mpesaService,
+//            userService,
+//            meterService
+//        )
 
         // User management routes (protected)
-        userRoutes(userService, meterService)
+        //userRoutes(userService)
+        authRoutes(authService)
     }
 }

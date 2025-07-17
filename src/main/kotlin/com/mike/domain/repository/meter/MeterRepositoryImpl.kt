@@ -1,66 +1,98 @@
 package com.mike.domain.repository.meter
 
-import com.mike.database.tables.Meters
 import com.mike.domain.model.meter.Meter
-import com.mike.domain.model.meter.MeterDto
+import com.mike.domain.model.meter.Meters
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
-import java.util.*
 
 class MeterRepositoryImpl : MeterRepository {
 
-    override fun findByDeviceId(deviceId: String): MeterDto? = transaction {
-        Meter.Companion.find { Meters.deviceId eq deviceId }
+    override fun findByDeviceId(deviceId: String): Meter? = transaction {
+        Meters.selectAll().where { Meters.deviceId eq deviceId }
             .singleOrNull()
-            ?.toMeterDto()
+            ?.let { resultRow ->
+                mapToMeter(resultRow)
+            }
     }
 
-    override fun findById(id: String): MeterDto? = transaction {
-        Meter.Companion.findById(UUID.fromString(id))?.toMeterDto()
+    override fun findById(id: String): Meter? = transaction {
+        Meters.selectAll().where { Meters.deviceId eq id }
+            .singleOrNull()
+            ?.let { resultRow ->
+                mapToMeter(resultRow)
+            }
     }
 
-    override fun getAllMeters(): List<MeterDto> = transaction {
-        Meter.Companion.all().map { it.toMeterDto() }
+    override fun getAllMeters(): List<Meter> = transaction {
+        Meters.selectAll()
+            .map { resultRow ->
+                mapToMeter(resultRow)
+            }
     }
 
-    override fun createMeter(
-        deviceId: String, name: String, productName: String?,
-        description: String?, location: String?
-    ): MeterDto = transaction {
+    override fun createMeter(meter: Meter): Meter = transaction {
         val now = LocalDateTime.now()
 
-        Meter.Companion.new {
-            this.deviceId = deviceId
-            this.name = name
-            this.productName = productName
-            this.description = description
-            this.location = location
-            this.active = true
-            this.createdAt = now
-            this.updatedAt = now
-        }.toMeterDto()
-    }
-
-    override fun updateMeter(
-        id: String, name: String?, productName: String?,
-        description: String?, location: String?, active: Boolean?
-    ): MeterDto? =
-        transaction {
-            val meter = Meter.Companion.findById(UUID.fromString(id)) ?: return@transaction null
-
-            name?.let { meter.name = it }
-            productName?.let { meter.productName = it }
-            description?.let { meter.description = it }
-            location?.let { meter.location = it }
-            active?.let { meter.active = it }
-            meter.updatedAt = LocalDateTime.now()
-
-            meter.toMeterDto()
+        Meters.insert {
+            it[deviceId] = meter.deviceId
+            it[name] = meter.name
+            it[productName] = meter.productName
+            it[description] = meter.description
+            it[location] = meter.location
+            it[active] = meter.active
+            it[createdAt] = now
+            it[updatedAt] = now
         }
 
+        // Return the created meter with updated timestamps
+        Meters.selectAll().where { Meters.deviceId eq meter.deviceId }
+            .singleOrNull()
+            ?.let { resultRow ->
+                mapToMeter(resultRow)
+            } ?: meter.copy(createdAt = now, updatedAt = now)
+    }
+
+    override fun updateMeter(meter: Meter): Meter = transaction {
+        val now = LocalDateTime.now()
+        
+        val updateCount = Meters.update({ Meters.deviceId eq meter.deviceId }) {
+            it[name] = meter.name
+            it[productName] = meter.productName
+            it[description] = meter.description
+            it[location] = meter.location
+            it[active] = meter.active
+            it[updatedAt] = now
+        }
+        
+        if (updateCount > 0) {
+            // Return the updated meter with new updatedAt timestamp
+            Meters.selectAll().where { Meters.deviceId eq meter.deviceId }
+                .singleOrNull()
+                ?.let { resultRow ->
+                    mapToMeter(resultRow)
+                } ?: meter.copy(updatedAt = now)
+        } else {
+            meter
+        }
+    }
+
     override fun deleteMeter(id: String): Boolean = transaction {
-        val meter = Meter.Companion.findById(UUID.fromString(id)) ?: return@transaction false
-        meter.delete()
-        true
+        val deleteCount = Meters.deleteWhere { deviceId eq id }
+        deleteCount > 0
+    }
+    
+    private fun mapToMeter(row: ResultRow): Meter {
+        return Meter(
+            deviceId = row[Meters.deviceId],
+            name = row[Meters.name],
+            productName = row[Meters.productName],
+            description = row[Meters.description],
+            location = row[Meters.location],
+            active = row[Meters.active],
+            createdAt = row[Meters.createdAt],
+            updatedAt = row[Meters.updatedAt]
+        )
     }
 }

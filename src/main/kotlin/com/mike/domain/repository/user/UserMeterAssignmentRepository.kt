@@ -1,14 +1,15 @@
 package com.mike.domain.repository.user
 
-import com.mike.domain.model.meter.MeterDto
-import com.mike.domain.model.user.UserDto
-import com.mike.domain.model.user.UserMeterAssignmentDto
+import com.mike.domain.model.meter.Meter
+import com.mike.domain.model.user.Profile
+import com.mike.domain.model.user.UserMeterAssignment
+
 
 interface UserMeterAssignmentRepository {
-    fun assignMeterToUser(userId: String, meterId: String): UserMeterAssignmentDto
-    fun removeMeterFromUser(userId: String, meterId: String): Boolean
-    fun getUserMeters(userId: String): List<MeterDto>
-    fun getMeterUsers(meterId: String): List<UserDto>
-    fun isMeterAssignedToUser(userId: String, meterId: String): Boolean
-    fun getAllAssignments(): List<UserMeterAssignmentDto>
+    fun assignMeterToUser(userId: Int, meterId: String): UserMeterAssignment
+    fun removeMeterFromUser(userId: Int, meterId: String): Boolean
+    fun getUserMeters(userId: Int): List<Meter>
+    fun getMeterUsers(meterId: String): List<Profile>
+    fun isMeterAssignedToUser(userId: Int, meterId: String): Boolean
+    fun getAllAssignments(): List<UserMeterAssignment>
 }

@@ -1,25 +1,12 @@
 package com.mike.domain.repository.meter
 
-import com.mike.domain.model.meter.MeterDto
+import com.mike.domain.model.meter.Meter
 
 interface MeterRepository {
-    fun findByDeviceId(deviceId: String): MeterDto?
-    fun findById(id: String): MeterDto?
-    fun getAllMeters(): List<MeterDto>
-    fun createMeter(
-        deviceId: String,
-        name: String,
-        productName: String? = null,
-        description: String? = null,
-        location: String? = null
-    ): MeterDto
-    fun updateMeter(
-        id: String,
-        name: String? = null,
-        productName: String? = null,
-        description: String? = null,
-        location: String? = null,
-        active: Boolean? = null
-    ): MeterDto?
+    fun findByDeviceId(deviceId: String): Meter?
+    fun findById(id: String): Meter?
+    fun getAllMeters(): List<Meter>
+    fun createMeter(meter: Meter): Meter
+    fun updateMeter(meter: Meter): Meter
     fun deleteMeter(id: String): Boolean
 }

@@ -1,29 +1,20 @@
 package com.mike.domain.repository.user
 
-import com.mike.domain.model.user.UserDto
+import com.mike.domain.model.user.Profile
+import com.mike.domain.model.user.ProfilePicture
+import com.mike.domain.model.user.RegisterRequest
+import com.mike.domain.model.user.User
 
 interface UserRepository {
-    fun findByEmail(email: String): UserDto?
-    fun findById(id: String): UserDto?
-    fun getAllUsers(): List<UserDto>
-    fun createUser(
-        email: String, 
-        password: String, 
-        firstName: String?, 
-        lastName: String?,
-        phoneNumber: String? = null, 
-        role: String = "USER"
-    ): UserDto
-    fun updateUser(
-        id: String, 
-        email: String? = null, 
-        firstName: String? = null, 
-        lastName: String? = null,
-        phoneNumber: String? = null, 
-        role: String? = null, 
-        active: Boolean? = null
-    ): UserDto?
-    fun changePassword(id: String, newPassword: String): Boolean
-    fun deleteUser(id: String): Boolean
-    fun validateCredentials(email: String, password: String): UserDto?
+    fun findByEmail(email: String): User?
+    fun findById(userId: Int): User?
+    fun fundUserProfile(userId: Int): Profile?
+    fun findUserRole(userId: Int): String?
+    fun getAllUsers(): List<Profile>
+    fun createUser(user: RegisterRequest): Pair<Boolean, String?> 
+    fun updateUser(updatedUser: Profile): Pair<Boolean, String?>
+    fun deleteUser(userId: Int): Pair<Boolean, String?>
+    fun uploadProfilePicture(userId: Int, pictureUrl: String): Pair<Boolean, String?>
+    fun getProfilePicture(userId: Int): ProfilePicture?
+
 }

@@ -3,11 +3,10 @@ package com.mike.domain.repository.mpesa
 import com.mike.domain.model.mpesa.*
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.util.UUID
 
 interface MpesaRepository {
     // Configuration
-    fun getMpesaConfig(): MpesaRepositoryImpl.MpesaConfig
+    fun getMpesaConfig(): MpesaConfig
     
     // Authentication
     suspend fun getAccessToken(): String
@@ -35,44 +34,23 @@ interface MpesaRepository {
     fun handleStalledTransactions(timeoutMinutes: Int): Int
     
     // Migrated from MpesaTransactionRepository
-    fun createTransaction(
-        amount: BigDecimal,
-        phoneNumber: String,
-        merchantRequestId: String? = null,
-        checkoutRequestId: String? = null,
-        responseCode: String? = null,
-        responseDescription: String? = null,
-        customerMessage: String? = null
-    ): MpesaTransactionDto
-    
-    fun updateTransactionFromCallback(
-        checkoutRequestId: String,
-        resultCode: String,
-        resultDesc: String,
-        mpesaReceiptNumber: String?,
-        transactionDate: LocalDateTime?
-    ): MpesaTransactionDto?
-    
-    fun updateTransactionFromTimeout(
-        checkoutRequestId: String,
-        resultDesc: String = "Transaction timed out waiting for callback"
-    ): MpesaTransactionDto?
-    
-    fun updateTransactionFromQuery(
-        checkoutRequestId: String,
-        resultCode: String,
-        resultDesc: String
-    ): MpesaTransactionDto?
-    
-    fun getTransactionById(id: UUID): MpesaTransactionDto?
-    
-    fun getTransactionByCheckoutRequestId(checkoutRequestId: String): MpesaTransactionDto?
-    
-    fun getTransactionsByPhoneNumber(phoneNumber: String): List<MpesaTransactionDto>
-    
-    fun getTransactionsByStatus(status: String): List<MpesaTransactionDto>
-    
-    fun getPendingTransactionsOlderThan(cutoffTime: LocalDateTime): List<MpesaTransactionDto>
-    
-    fun getAllTransactions(): List<MpesaTransactionDto>
+    fun createTransaction(request: MpesaTransactionCreateRequest)
+
+    fun updateTransactionFromCallback(request: MpesaTransactionCallbackUpdate)
+
+    fun updateTransactionFromTimeout(request: MpesaTransactionTimeoutUpdate)
+
+    fun updateTransactionFromQuery(request: MpesaTransactionQueryUpdate)
+
+    fun getTransactionById(id: Int): MpesaTransaction?
+
+    fun getTransactionByCheckoutRequestId(checkoutRequestId: String): MpesaTransaction?
+
+    fun getTransactionsByPhoneNumber(phoneNumber: String): List<MpesaTransaction>
+
+    fun getTransactionsByStatus(status: String): List<MpesaTransaction>
+
+    fun getPendingTransactionsOlderThan(cutoffTime: LocalDateTime): List<MpesaTransaction>
+
+    fun getAllTransactions(): List<MpesaTransaction>
 }

@@ -1,10 +1,14 @@
 package com.mike.database
 
+import com.mike.domain.model.meter.MeterPayments
+import com.mike.domain.model.meter.Meters
+import com.mike.domain.model.mpesa.MpesaTransactions
+import com.mike.domain.model.user.RefreshTokens
+import com.mike.domain.model.user.Users
 import io.ktor.server.config.*
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
-import com.mike.database.tables.*
 import org.slf4j.LoggerFactory
 
 object DatabaseFactory {
@@ -32,9 +36,9 @@ object DatabaseFactory {
                 SchemaUtils.create(
                     Users,
                     Meters,
-                    UserMeterAssignments,
                     MpesaTransactions,
-                    MeterPayments
+                    MeterPayments,
+                    RefreshTokens
                 )
             }
             logger.info("Database connected and tables created successfully")
