@@ -31,10 +31,6 @@ data class RegisterRequest(
     val lastName: String? = null
 )
 
-data class LoginCredentials(
-    val email: String,
-    val password: String
-)
 
 object ProfilePictures : Table() {
     val userId = reference("user_id", Users.userId)

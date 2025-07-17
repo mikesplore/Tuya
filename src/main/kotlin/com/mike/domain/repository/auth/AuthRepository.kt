@@ -1,7 +1,8 @@
 package com.mike.domain.repository.auth
 
+import com.mike.domain.model.auth.LoginCredentials
+import com.mike.domain.model.auth.RefreshToken
 import com.mike.domain.model.user.*
-import java.time.LocalDateTime
 
 interface AuthRepository {
     fun changePassword(id: String, newPassword: String): Pair<Boolean, String?>

@@ -1,8 +1,14 @@
 package com.mike.routes
 
-import com.mike.domain.model.user.LoginCredentials
-import com.mike.domain.model.user.LoginResponse
-import com.mike.domain.model.user.TokenPayload
+import com.mike.domain.model.auth.ChangePasswordRequest
+import com.mike.domain.model.auth.ErrorResponse
+import com.mike.domain.model.auth.LoginCredentials
+import com.mike.domain.model.auth.LoginResponse
+import com.mike.domain.model.auth.MessageResponse
+import com.mike.domain.model.auth.RefreshTokenRequest
+import com.mike.domain.model.auth.TokenPayload
+import com.mike.domain.model.auth.VerifyTokenRequest
+import com.mike.domain.model.auth.VerifyTokenResponse
 import com.mike.service.auth.AuthService
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -14,13 +20,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// Request/Response DTOs
-data class RefreshTokenRequest(val refreshToken: String)
-data class ChangePasswordRequest(val newPassword: String)
-data class MessageResponse(val message: String)
-data class ErrorResponse(val error: String)
-data class VerifyTokenRequest(val token: String)
-data class VerifyTokenResponse(val isValid: Boolean, val userId: Int?)
 
 fun Route.authRoutes(authService: AuthService) {
     val scope = CoroutineScope(Dispatchers.IO)

@@ -1,5 +1,6 @@
-package com.mike.domain.model.user
+package com.mike.domain.model.auth
 
+import com.mike.domain.model.user.Users
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.javatime.datetime
 import java.time.LocalDateTime

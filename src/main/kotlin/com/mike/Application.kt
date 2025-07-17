@@ -1,8 +1,10 @@
 package com.mike
 
+import com.mike.apidocumentation.configureSwagger
 import com.mike.auth.JwtService
 import com.mike.database.DatabaseFactory
 import com.mike.di.appModule
+import com.mike.domain.model.user.RegisterRequest
 import com.mike.domain.repository.user.UserRepository
 import com.mike.service.auth.AuthService
 //import com.mike.service.meter.MeterService
@@ -13,8 +15,6 @@ import io.github.cdimascio.dotenv.dotenv
 import io.ktor.server.application.*
 import io.ktor.server.auth.Authentication
 import io.ktor.server.plugins.calllogging.*
-import io.ktor.server.plugins.openapi.*
-import io.ktor.server.plugins.swagger.*
 import org.koin.core.context.startKoin
 import org.koin.ktor.ext.get
 import org.koin.logger.slf4jLogger
@@ -52,19 +52,19 @@ fun Application.module() {
     }
 
     val accessId = dotenv["ACCESS_ID"]
-
     val accessSecret = dotenv["ACCESS_SECRET"]
-
     val endpoint = dotenv["TUYA_ENDPOINT"]
 
     val userService = get<UserService>()
     val authService = get<AuthService>()
 //    val meterService = get<MeterService>()
 //    val mpesaService = get<MpesaService>()
+
     val userRepository = get<UserRepository>()
     val smartMeterService = SmartMeterService(accessId, accessSecret, endpoint = endpoint)
 
     configureSerialization()
+    configureSwagger()
 
     //configureSecurity(userService)
     configureRouting( userService,  smartMeterService, authService)

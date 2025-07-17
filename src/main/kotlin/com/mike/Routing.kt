@@ -4,7 +4,7 @@ package com.mike
 //import com.mike.routes.mpesaRoutes
 import com.mike.routes.authRoutes
 import com.mike.service.auth.AuthService
-//import com.mike.routes.userRoutes
+import com.mike.routes.userRoutes
 //import com.mike.service.meter.MeterService
 //import com.mike.service.mpesa.MpesaService
 import com.mike.service.user.UserService
@@ -111,7 +111,7 @@ fun Application.configureRouting(userService: UserService,  smartMeterService: S
 //        )
 
         // User management routes (protected)
-        //userRoutes(userService)
+        userRoutes(userService)
         authRoutes(authService)
     }
 }

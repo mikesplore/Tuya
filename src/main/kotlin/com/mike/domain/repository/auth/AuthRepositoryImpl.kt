@@ -2,10 +2,10 @@ package com.mike.domain.repository.auth
 
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.mike.auth.JwtService
-import com.mike.domain.model.user.LoginCredentials
+import com.mike.domain.model.auth.LoginCredentials
+import com.mike.domain.model.auth.RefreshToken
+import com.mike.domain.model.auth.RefreshTokens
 import com.mike.domain.model.user.Profile
-import com.mike.domain.model.user.RefreshToken
-import com.mike.domain.model.user.RefreshTokens
 import com.mike.domain.model.user.Users
 import com.mike.domain.model.user.User
 import com.mike.domain.model.user.Profiles

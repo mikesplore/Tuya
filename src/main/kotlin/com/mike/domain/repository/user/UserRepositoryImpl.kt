@@ -79,9 +79,29 @@ class UserRepositoryImpl(
 
     override fun createUser(user: RegisterRequest): Pair<Boolean, String?> = transaction {
         try {
+            // Check for duplicate email
             val existingUser = Users.selectAll().where { Users.email eq user.email }.singleOrNull()
             if (existingUser != null) {
                 return@transaction Pair(false, "User with email ${user.email} already exists")
+            }
+            // Check for duplicate phone number if provided
+            if (!user.phoneNumber.isNullOrBlank()) {
+                // Remove all spaces from the phone number
+                val cleanedPhone = user.phoneNumber.replace(" ", "")
+                // Validate phone number format: +254XXXXXXXXX or 0XXXXXXXXX
+                val phoneRegex = "^(\\+254\\d{9}|0\\d{9})$".toRegex()
+                if (!cleanedPhone.matches(phoneRegex)) {
+                    return@transaction Pair(false, "Phone number must be in the format +254XXXXXXXXX or 0XXXXXXXXX")
+                }
+                val existingPhone = Profiles.selectAll().where { Profiles.phoneNumber eq cleanedPhone }.singleOrNull()
+                if (existingPhone != null) {
+                    return@transaction Pair(false, "User with phone number ${cleanedPhone} already exists")
+                }
+            }
+            // Check for valid email format
+            val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$".toRegex()
+            if (!user.email.matches(emailRegex)) {
+                return@transaction Pair(false, "Invalid email format")
             }
             if (user.email.isBlank()) {
                 return@transaction Pair(false, "Email is required")

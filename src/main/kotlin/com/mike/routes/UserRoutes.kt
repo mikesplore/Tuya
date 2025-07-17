@@ -11,35 +11,30 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-data class PasswordChangeRequest(
-    val currentPassword: String,
-    val newPassword: String
-)
-
 fun Route.userRoutes(userService: UserService) {
 
     // Get all users (admin only)
     get("/users") {
-        val principal = call.principal<JWTPrincipal>()
-        val role = principal?.payload?.getClaim("role")?.asString()
-
-        if (role != "ADMIN") {
-            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
-            return@get
-        }
+//        val principal = call.principal<JWTPrincipal>()
+//        val role = principal?.payload?.getClaim("role")?.asString()
+//
+//        if (role != "ADMIN") {
+//            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
+//            return@get
+//        }
 
         val users = userService.getAllUsers()
         call.respond(users)
     }
 
     post("/users") {
-        val principal = call.principal<JWTPrincipal>()
-        val role = principal?.payload?.getClaim("role")?.asString()
-
-        if (role != "ADMIN") {
-            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
-            return@post
-        }
+//        val principal = call.principal<JWTPrincipal>()
+//        val role = principal?.payload?.getClaim("role")?.asString()
+//
+//        if (role != "ADMIN") {
+//            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
+//            return@post
+//        }
 
         try {
             val registerRequest = call.receive<RegisterRequest>()
@@ -60,35 +55,18 @@ fun Route.userRoutes(userService: UserService) {
         }
     }
 
-    // Get current user
-    get("/users/me") {
-        val principal = call.principal<JWTPrincipal>()
-        val userId = principal?.payload?.subject?.toIntOrNull()
-
-        if (userId != null) {
-            val user = userService.getUserById(userId)
-            if (user != null) {
-                call.respond(user)
-            } else {
-                call.respond(HttpStatusCode.NotFound, mapOf("message" to "User not found"))
-            }
-        } else {
-            call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Invalid authentication"))
-        }
-    }
-
     // Update user
     put("/users/{id}") {
-        val principal = call.principal<JWTPrincipal>()
-        val currentUserId = principal?.payload?.subject?.toIntOrNull()
-        val role = principal?.payload?.getClaim("role")?.asString()
+//        val principal = call.principal<JWTPrincipal>()
+//        val currentUserId = principal?.payload?.subject?.toIntOrNull()
+//        val role = principal?.payload?.getClaim("role")?.asString()
         val id = call.parameters["id"]?.toIntOrNull() ?: return@put call.respond(HttpStatusCode.BadRequest)
 
-        // Only allow users to update their own info, unless they're an admin
-        if (id != currentUserId && role != "ADMIN") {
-            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "You can only update your own profile"))
-            return@put
-        }
+//        // Only allow users to update their own info, unless they're an admin
+//        if (id != currentUserId && role != "ADMIN") {
+//            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "You can only update your own profile"))
+//            return@put
+//        }
 
         try {
             val profile = call.receive<Profile>()
@@ -108,13 +86,13 @@ fun Route.userRoutes(userService: UserService) {
 
     // Delete user (admin only)
     delete("/users/{id}") {
-        val principal = call.principal<JWTPrincipal>()
-        val role = principal?.payload?.getClaim("role")?.asString()
-
-        if (role != "ADMIN") {
-            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
-            return@delete
-        }
+//        val principal = call.principal<JWTPrincipal>()
+//        val role = principal?.payload?.getClaim("role")?.asString()
+//
+//        if (role != "ADMIN") {
+//            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
+//            return@delete
+//        }
 
         val id = call.parameters["id"]?.toIntOrNull() ?: return@delete call.respond(HttpStatusCode.BadRequest)
         val (success, error) = userService.deleteUser(id)

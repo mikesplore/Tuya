@@ -1,9 +1,11 @@
 package com.mike.database
 
+import com.mike.domain.model.auth.RefreshTokens
 import com.mike.domain.model.meter.MeterPayments
 import com.mike.domain.model.meter.Meters
 import com.mike.domain.model.mpesa.MpesaTransactions
-import com.mike.domain.model.user.RefreshTokens
+import com.mike.domain.model.user.ProfilePictures
+import com.mike.domain.model.user.Profiles
 import com.mike.domain.model.user.Users
 import io.ktor.server.config.*
 import org.jetbrains.exposed.sql.Database
@@ -35,9 +37,11 @@ object DatabaseFactory {
             transaction {
                 SchemaUtils.create(
                     Users,
+                    Profiles,
                     Meters,
                     MpesaTransactions,
                     MeterPayments,
+                    ProfilePictures,
                     RefreshTokens
                 )
             }

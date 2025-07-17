@@ -11,5 +11,8 @@ fun Application.configureSwagger() {
         swaggerUI(path = "swagger/authentication", swaggerFile = "openapi/authentication.yaml")
         openAPI(path = "openapi/authentication", swaggerFile = "openapi/authentication.yaml")
 
+        swaggerUI(path = "swagger/user", swaggerFile = "openapi/users.yaml")
+        openAPI(path = "openapi/user", swaggerFile = "openapi/users.yaml")
+
     }
 }
