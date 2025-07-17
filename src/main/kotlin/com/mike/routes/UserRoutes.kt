@@ -27,6 +27,17 @@ fun Route.userRoutes(userService: UserService) {
         call.respond(users)
     }
 
+    get("/users/{id}") {
+        val id = call.parameters["id"]?.toIntOrNull() ?: return@get call.respond(HttpStatusCode.BadRequest)
+
+        val user = userService.getUserProfile(id)
+        if (user != null) {
+            call.respond(user)
+        } else {
+            call.respond(HttpStatusCode.NotFound, mapOf("message" to "User not found"))
+        }
+    }
+
     post("/users") {
 //        val principal = call.principal<JWTPrincipal>()
 //        val role = principal?.payload?.getClaim("role")?.asString()

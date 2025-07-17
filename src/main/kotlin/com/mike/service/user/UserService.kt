@@ -18,6 +18,10 @@ class UserService(
     fun getUserByEmail(email: String): User? {
         return userRepository.findByEmail(email)
     }
+
+    fun getUserProfile(userId: Int): Profile? {
+        return userRepository.fundUserProfile(userId)
+    }
     
     fun getAllUsers(): List<Profile> {
         return userRepository.getAllUsers()
@@ -30,10 +34,7 @@ class UserService(
     fun updateUser(profile: Profile): Pair<Boolean, String?> {
         return userRepository.updateUser(profile)
     }
-    
-//    fun changePassword(id: String, newPassword: String): Pair<Boolean, String?> {
-//        return userRepository.changePassword(id, newPassword)
-//    }
+
     
     fun deleteUser(id: Int): Pair<Boolean, String?> {
         return userRepository.deleteUser(id)

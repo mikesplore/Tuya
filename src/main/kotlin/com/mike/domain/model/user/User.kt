@@ -59,6 +59,16 @@ data class Profile(
     val profilePictureUrl: String? = null
 )
 
+data class ProfileUpdateRequest(
+    val userId: Int,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val email: String? = null,
+    val phoneNumber: String? = null,
+    val userRole: String,
+    val profilePictureUrl: String? = null
+)
+
 data class User(
     val id: Int? = null,
     val email: String,

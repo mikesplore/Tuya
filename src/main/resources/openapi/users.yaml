@@ -58,6 +58,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
   /users/{id}:
+    get:
+      summary: Get user by ID
+      description: Retrieve a single user by their user ID (admin or self).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Profile found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
     put:
       summary: Update user
       description: Update a user's profile (self or admin only).
@@ -74,7 +98,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Profile'
+              $ref: '#/components/schemas/ProfileUpdateRequest'
       responses:
         '200':
           description: User updated
@@ -152,6 +176,31 @@ components:
       required:
         - email
         - password
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        userId:
+          type: integer
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        phoneNumber:
+          type: string
+          nullable: true
+        userRole:
+          type: string
+        profilePictureUrl:
+          type: string
+          nullable: true
+      required:
+        - userId
+        - userRole
     Profile:
       type: object
       properties:

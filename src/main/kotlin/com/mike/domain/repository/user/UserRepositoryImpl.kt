@@ -134,10 +134,39 @@ class UserRepositoryImpl(
         try {
             Users.selectAll().where { Users.userId eq updatedUser.userId }
                 .singleOrNull() ?: return@transaction Pair(false, "User not found")
+            // Clean and validate phone number if provided
+            var cleanedPhone: String? = updatedUser.phoneNumber?.replace(" ", "")
+            if (!cleanedPhone.isNullOrBlank()) {
+                val phoneRegex = "^(\\+254\\d{9}|0\\d{9})$".toRegex()
+                if (!cleanedPhone.matches(phoneRegex)) {
+                    return@transaction Pair(false, "Phone number must be in the format +254XXXXXXXXX or 0XXXXXXXXX")
+                }
+                // Check for duplicate phone number (excluding current user)
+                val existingPhone = Profiles.selectAll()
+                    .where { (Profiles.phoneNumber eq cleanedPhone) and (Profiles.userId neq updatedUser.userId) }
+                    .singleOrNull()
+                if (existingPhone != null) {
+                    return@transaction Pair(false, "User with phone number ${cleanedPhone} already exists")
+                }
+            }
+            // Validate email if provided (and not blank)
+            if (!updatedUser.email.isNullOrBlank()) {
+                val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$".toRegex()
+                if (!updatedUser.email.matches(emailRegex)) {
+                    return@transaction Pair(false, "Invalid email format")
+                }
+                // Check for duplicate email (excluding current user)
+                val existingEmail = Users.selectAll()
+                    .where { (Users.email eq updatedUser.email) and (Users.userId neq updatedUser.userId) }
+                    .singleOrNull()
+                if (existingEmail != null) {
+                    return@transaction Pair(false, "User with email ${updatedUser.email} already exists")
+                }
+            }
             Profiles.update({ Profiles.userId eq updatedUser.userId }) {
                 it[firstName] = updatedUser.firstName
                 it[lastName] = updatedUser.lastName
-                it[phoneNumber] = updatedUser.phoneNumber
+                it[phoneNumber] = cleanedPhone
                 it[updatedAt] = LocalDateTime.now()
             }
             Pair(true, null)
