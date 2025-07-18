@@ -34,7 +34,9 @@ data class RegisterRequest(
 
 object ProfilePictures : Table() {
     val userId = reference("user_id", Users.userId)
-    val pictureUrl = varchar("picture_url", 255)
+    val filename = varchar("filename", 255)
+    val contentType = varchar("content_type", 100)
+    val data = binary("data")  // For storing the actual image data
     val createdAt = datetime("created_at")
     val updatedAt = datetime("updated_at")
     override val primaryKey = PrimaryKey(userId, name = "PK_ProfilePicture_User_Id")
@@ -42,10 +44,38 @@ object ProfilePictures : Table() {
 
 data class ProfilePicture(
     val userId: Int,
-    val pictureUrl: String,
+    val filename: String,
+    val contentType: String,
+    val data: ByteArray,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ProfilePicture
+
+        if (userId != other.userId) return false
+        if (filename != other.filename) return false
+        if (contentType != other.contentType) return false
+        if (!data.contentEquals(other.data)) return false
+        if (createdAt != other.createdAt) return false
+        if (updatedAt != other.updatedAt) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = userId
+        result = 31 * result + filename.hashCode()
+        result = 31 * result + contentType.hashCode()
+        result = 31 * result + data.contentHashCode()
+        result = 31 * result + createdAt.hashCode()
+        result = 31 * result + updatedAt.hashCode()
+        return result
+    }
+}
 
 data class Profile(
     val userId: Int,
@@ -66,8 +96,44 @@ data class ProfileUpdateRequest(
     val email: String? = null,
     val phoneNumber: String? = null,
     val userRole: String,
-    val profilePictureUrl: String? = null
-)
+    val profilePicture: ByteArray? = null,
+    val profilePictureContentType: String? = null,
+    val profilePictureFilename: String? = null
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ProfileUpdateRequest
+
+        if (userId != other.userId) return false
+        if (firstName != other.firstName) return false
+        if (lastName != other.lastName) return false
+        if (email != other.email) return false
+        if (phoneNumber != other.phoneNumber) return false
+        if (userRole != other.userRole) return false
+        if (profilePicture != null && other.profilePicture != null) {
+            if (!profilePicture.contentEquals(other.profilePicture)) return false
+        } else if (profilePicture != other.profilePicture) return false
+        if (profilePictureContentType != other.profilePictureContentType) return false
+        if (profilePictureFilename != other.profilePictureFilename) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = userId
+        result = 31 * result + (firstName?.hashCode() ?: 0)
+        result = 31 * result + (lastName?.hashCode() ?: 0)
+        result = 31 * result + (email?.hashCode() ?: 0)
+        result = 31 * result + (phoneNumber?.hashCode() ?: 0)
+        result = 31 * result + userRole.hashCode()
+        result = 31 * result + (profilePicture?.contentHashCode() ?: 0)
+        result = 31 * result + (profilePictureContentType?.hashCode() ?: 0)
+        result = 31 * result + (profilePictureFilename?.hashCode() ?: 0)
+        return result
+    }
+}
 
 data class User(
     val id: Int? = null,

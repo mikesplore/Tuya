@@ -2,7 +2,6 @@ package com.mike.routes
 
 import com.mike.domain.model.user.Profile
 import com.mike.domain.model.user.RegisterRequest
-//import com.mike.service.meter.MeterService
 import com.mike.service.user.UserService
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -15,13 +14,13 @@ fun Route.userRoutes(userService: UserService) {
 
     // Get all users (admin only)
     get("/users") {
-//        val principal = call.principal<JWTPrincipal>()
-//        val role = principal?.payload?.getClaim("role")?.asString()
-//
-//        if (role != "ADMIN") {
-//            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
-//            return@get
-//        }
+
+        val role = getUserRoleFromCall(call) ?: return@get call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Unauthorized"))
+
+        if (role != "ADMIN") {
+            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
+            return@get
+        }
 
         val users = userService.getAllUsers()
         call.respond(users)
@@ -39,13 +38,12 @@ fun Route.userRoutes(userService: UserService) {
     }
 
     post("/users") {
-//        val principal = call.principal<JWTPrincipal>()
-//        val role = principal?.payload?.getClaim("role")?.asString()
-//
-//        if (role != "ADMIN") {
-//            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
-//            return@post
-//        }
+        val role = getUserRoleFromCall(call) ?: return@post call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Unauthorized"))
+
+        if (role != "ADMIN") {
+            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
+            return@post
+        }
 
         try {
             val registerRequest = call.receive<RegisterRequest>()
@@ -68,16 +66,16 @@ fun Route.userRoutes(userService: UserService) {
 
     // Update user
     put("/users/{id}") {
-//        val principal = call.principal<JWTPrincipal>()
-//        val currentUserId = principal?.payload?.subject?.toIntOrNull()
-//        val role = principal?.payload?.getClaim("role")?.asString()
+        val principal = call.principal<JWTPrincipal>()
+        val currentUserId = principal?.payload?.subject?.toIntOrNull()
+        val role = getUserRoleFromCall(call) ?: return@put call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Unauthorized"))
         val id = call.parameters["id"]?.toIntOrNull() ?: return@put call.respond(HttpStatusCode.BadRequest)
 
-//        // Only allow users to update their own info, unless they're an admin
-//        if (id != currentUserId && role != "ADMIN") {
-//            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "You can only update your own profile"))
-//            return@put
-//        }
+        // Only allow users to update their own info, unless they're an admin
+        if (id != currentUserId && role != "ADMIN") {
+            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "You can only update your own profile"))
+            return@put
+        }
 
         try {
             val profile = call.receive<Profile>()
@@ -97,13 +95,12 @@ fun Route.userRoutes(userService: UserService) {
 
     // Delete user (admin only)
     delete("/users/{id}") {
-//        val principal = call.principal<JWTPrincipal>()
-//        val role = principal?.payload?.getClaim("role")?.asString()
-//
-//        if (role != "ADMIN") {
-//            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
-//            return@delete
-//        }
+        val role = getUserRoleFromCall(call) ?: return@delete call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Unauthorized"))
+
+        if (role != "ADMIN") {
+            call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Admin access required"))
+            return@delete
+        }
 
         val id = call.parameters["id"]?.toIntOrNull() ?: return@delete call.respond(HttpStatusCode.BadRequest)
         val (success, error) = userService.deleteUser(id)
@@ -114,4 +111,10 @@ fun Route.userRoutes(userService: UserService) {
             call.respond(HttpStatusCode.BadRequest, mapOf("message" to error))
         }
     }
+}
+
+
+fun getUserRoleFromCall(call: RoutingCall): String? {
+    val principal = call.principal<JWTPrincipal>()
+    return principal?.payload?.getClaim("role")?.asString()
 }

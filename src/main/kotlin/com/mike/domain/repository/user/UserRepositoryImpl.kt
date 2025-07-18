@@ -188,7 +188,7 @@ class UserRepositoryImpl(
         }
     }
 
-    override fun uploadProfilePicture(userId: Int, pictureUrl: String): Pair<Boolean, String?> = transaction {
+    override fun uploadProfilePicture(userId: Int, filename: String, contentType: String, imageData: ByteArray): Pair<Boolean, String?> = transaction {
         try {
             Users.selectAll().where { Users.userId eq userId }
                 .singleOrNull() ?: return@transaction Pair(false, "User not found")
@@ -196,13 +196,17 @@ class UserRepositoryImpl(
             val existingPicture = ProfilePictures.selectAll().where { ProfilePictures.userId eq userId }.singleOrNull()
             if (existingPicture != null) {
                 ProfilePictures.update({ ProfilePictures.userId eq userId }) {
-                    it[ProfilePictures.pictureUrl] = pictureUrl
+                    it[ProfilePictures.filename] = filename
+                    it[ProfilePictures.contentType] = contentType
+                    it[ProfilePictures.data] = imageData
                     it[updatedAt] = now
                 }
             } else {
                 ProfilePictures.insert {
                     it[ProfilePictures.userId] = userId
-                    it[ProfilePictures.pictureUrl] = pictureUrl
+                    it[ProfilePictures.filename] = filename
+                    it[ProfilePictures.contentType] = contentType
+                    it[ProfilePictures.data] = imageData
                     it[createdAt] = now
                     it[updatedAt] = now
                 }
@@ -220,7 +224,9 @@ class UserRepositoryImpl(
                 ?.let { resultRow ->
                     ProfilePicture(
                         userId = resultRow[ProfilePictures.userId],
-                        pictureUrl = resultRow[ProfilePictures.pictureUrl],
+                        filename = resultRow[ProfilePictures.filename],
+                        contentType = resultRow[ProfilePictures.contentType],
+                        data = resultRow[ProfilePictures.data],
                         createdAt = resultRow[ProfilePictures.createdAt],
                         updatedAt = resultRow[ProfilePictures.updatedAt]
                     )
@@ -242,10 +248,6 @@ class UserRepositoryImpl(
     }
 
     private val mapToProfile: (row: ResultRow) -> Profile = { row ->
-        val profilePicture = ProfilePictures
-            .selectAll().where { ProfilePictures.userId eq row[Users.userId] }
-            .singleOrNull()
-            ?.let { it[ProfilePictures.pictureUrl] }
         Profile(
             userId = row[Users.userId],
             email = row[Users.email],
@@ -255,7 +257,12 @@ class UserRepositoryImpl(
             userRole = row[Users.role],
             createdAt = row[Profiles.createdAt],
             updatedAt = row[Profiles.updatedAt],
-            profilePictureUrl = profilePicture
+            // Generate a URL to access the profile picture via API endpoint
+            profilePictureUrl = if (ProfilePictures.selectAll().where { ProfilePictures.userId eq row[Users.userId] }.count() > 0) {
+                "/api/users/${row[Users.userId]}/profile-picture"
+            } else {
+                null
+            }
         )
     }
 }
