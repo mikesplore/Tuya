@@ -25,7 +25,7 @@ class UserMeterAssignmentRepositoryImpl : UserMeterAssignmentRepository {
         }
 
         // Check if meter exists
-        val meterExists = Meters.selectAll().where { Meters.deviceId eq meterId }.count() > 0
+        val meterExists = Meters.selectAll().where { Meters.meterId eq meterId }.count() > 0
         if (!meterExists) {
             throw IllegalArgumentException("Meter not found")
         }
@@ -67,7 +67,7 @@ class UserMeterAssignmentRepositoryImpl : UserMeterAssignmentRepository {
             .selectAll().where { UserMeterAssignments.userId eq userId }
             .map {
                 Meter(
-                    deviceId = it[Meters.deviceId],
+                    meterId = it[Meters.meterId],
                     name = it[Meters.name],
                     productName = it[Meters.productName],
                     description = it[Meters.description],

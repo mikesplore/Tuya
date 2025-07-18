@@ -3,8 +3,12 @@ package com.mike
 //import com.mike.routes.deviceRoutes
 //import com.mike.routes.mpesaRoutes
 import com.mike.routes.authRoutes
+import com.mike.routes.meterRoutes
+import com.mike.routes.meterUserRoutes
 import com.mike.service.auth.AuthService
 import com.mike.routes.userRoutes
+import com.mike.service.meter.MeterService
+import com.mike.service.meter.MeterUserService
 //import com.mike.service.meter.MeterService
 //import com.mike.service.mpesa.MpesaService
 import com.mike.service.user.UserService
@@ -27,7 +31,7 @@ data class ErrorResponse(
     val message: String
 )
 
-fun Application.configureRouting(userService: UserService,  smartMeterService: SmartMeterService, authService: AuthService) {
+fun Application.configureRouting(userService: UserService,  smartMeterService: SmartMeterService, authService: AuthService, meterService: MeterService, meterUserService: MeterUserService) {
     // Install CORS
     install(CORS) {
         anyHost()
@@ -113,5 +117,7 @@ fun Application.configureRouting(userService: UserService,  smartMeterService: S
         // User management routes (protected)
         userRoutes(userService)
         authRoutes(authService)
+        meterRoutes(meterService)
+        meterUserRoutes(meterUserService)
     }
 }

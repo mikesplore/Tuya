@@ -7,7 +7,8 @@ import com.mike.di.appModule
 import com.mike.domain.model.user.RegisterRequest
 import com.mike.domain.repository.user.UserRepository
 import com.mike.service.auth.AuthService
-//import com.mike.service.meter.MeterService
+import com.mike.service.meter.MeterService
+import com.mike.service.meter.MeterUserService
 //import com.mike.service.mpesa.MpesaService
 import com.mike.service.user.UserService
 import com.mike.tuya.service.SmartMeterService
@@ -57,7 +58,8 @@ fun Application.module() {
 
     val userService = get<UserService>()
     val authService = get<AuthService>()
-//    val meterService = get<MeterService>()
+    val meterService = get<MeterService>()
+    val meterUserService = get<MeterUserService>()
 //    val mpesaService = get<MpesaService>()
 
     val userRepository = get<UserRepository>()
@@ -67,5 +69,5 @@ fun Application.module() {
     configureSwagger()
 
     //configureSecurity(userService)
-    configureRouting( userService,  smartMeterService, authService)
+    configureRouting( userService,  smartMeterService, authService, meterService, meterUserService)
 }

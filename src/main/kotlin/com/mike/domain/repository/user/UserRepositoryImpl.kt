@@ -134,8 +134,8 @@ class UserRepositoryImpl(
         try {
             Users.selectAll().where { Users.userId eq updatedUser.userId }
                 .singleOrNull() ?: return@transaction Pair(false, "User not found")
-            // Clean and validate phone number if provided
-            var cleanedPhone: String? = updatedUser.phoneNumber?.replace(" ", "")
+            // Clean and validate a phone number if provided
+            val cleanedPhone: String? = updatedUser.phoneNumber?.replace(" ", "")
             if (!cleanedPhone.isNullOrBlank()) {
                 val phoneRegex = "^(\\+254\\d{9}|0\\d{9})$".toRegex()
                 if (!cleanedPhone.matches(phoneRegex)) {
@@ -146,7 +146,7 @@ class UserRepositoryImpl(
                     .where { (Profiles.phoneNumber eq cleanedPhone) and (Profiles.userId neq updatedUser.userId) }
                     .singleOrNull()
                 if (existingPhone != null) {
-                    return@transaction Pair(false, "User with phone number ${cleanedPhone} already exists")
+                    return@transaction Pair(false, "User with phone number $cleanedPhone already exists")
                 }
             }
             // Validate email if provided (and not blank)
@@ -259,7 +259,7 @@ class UserRepositoryImpl(
             updatedAt = row[Profiles.updatedAt],
             // Generate a URL to access the profile picture via API endpoint
             profilePictureUrl = if (ProfilePictures.selectAll().where { ProfilePictures.userId eq row[Users.userId] }.count() > 0) {
-                "/api/users/${row[Users.userId]}/profile-picture"
+                "/users/${row[Users.userId]}/profile-picture"
             } else {
                 null
             }

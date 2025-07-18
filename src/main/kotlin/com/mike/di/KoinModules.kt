@@ -7,14 +7,16 @@ import com.mike.domain.repository.meter.MeterPaymentRepository
 import com.mike.domain.repository.meter.MeterPaymentRepositoryImpl
 import com.mike.domain.repository.meter.MeterRepository
 import com.mike.domain.repository.meter.MeterRepositoryImpl
+import com.mike.domain.repository.meter.MeterUserAssignmentRepository
+import com.mike.domain.repository.meter.MeterUserAssignmentRepositoryImpl
 import com.mike.domain.repository.mpesa.MpesaRepository
 //import com.mike.domain.repository.mpesa.MpesaRepositoryImpl
-import com.mike.domain.repository.user.UserMeterAssignmentRepository
-import com.mike.domain.repository.user.UserMeterAssignmentRepositoryImpl
 import org.koin.dsl.module
 import com.mike.domain.repository.user.UserRepository
 import com.mike.domain.repository.user.UserRepositoryImpl
 import com.mike.service.auth.AuthService
+import com.mike.service.meter.MeterService
+import com.mike.service.meter.MeterUserService
 //import com.mike.service.meter.MeterService
 //import com.mike.service.mpesa.MpesaService
 import com.mike.service.user.UserService
@@ -38,7 +40,10 @@ val appModule = module {
     single { JwtService(get()) }
     single<AuthRepository> { AuthRepositoryImpl(get()) }
 
+    single<MeterRepository> { MeterRepositoryImpl() }
     single<UserRepository> { UserRepositoryImpl(get()) }
+    single<MeterUserAssignmentRepository> { MeterUserAssignmentRepositoryImpl(get(), get()) }
+
 
 
 
@@ -48,15 +53,14 @@ val appModule = module {
 
 //    single<MpesaRepository> { MpesaRepositoryImpl(httpClient, get()) }
 
-    single<MeterRepository> { MeterRepositoryImpl() }
-
-    single { UserService(get(), get()) }
+    single { UserService(get()) }
 
 //    single { MpesaService(get(), get()) }
 //
-//    single { MeterService(get(), get(), get()) }
+    single { MeterService(get()) }
 
-    single<UserMeterAssignmentRepository> { UserMeterAssignmentRepositoryImpl() }
+    single { MeterUserService(get()) }
+
 
     }
 

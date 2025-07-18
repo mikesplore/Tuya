@@ -114,7 +114,7 @@ data class ProfileUpdateRequest(
         if (userRole != other.userRole) return false
         if (profilePicture != null && other.profilePicture != null) {
             if (!profilePicture.contentEquals(other.profilePicture)) return false
-        } else if (profilePicture != other.profilePicture) return false
+        } else if (!profilePicture.contentEquals(other.profilePicture)) return false
         if (profilePictureContentType != other.profilePictureContentType) return false
         if (profilePictureFilename != other.profilePictureFilename) return false
 

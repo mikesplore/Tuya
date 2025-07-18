@@ -15,7 +15,7 @@ class MeterPaymentRepositoryImpl : MeterPaymentRepository {
         val now = LocalDateTime.now()
 
         // Verify meter exists
-        Meters.selectAll().where { Meters.deviceId eq meterPayment.meterId }
+        Meters.selectAll().where { Meters.meterId eq meterPayment.meterId }
             .singleOrNull() ?: throw IllegalArgumentException("Meter not found")
 
         // Verify user exists if userId is provided
@@ -98,7 +98,7 @@ class MeterPaymentRepositoryImpl : MeterPaymentRepository {
         val now = LocalDateTime.now()
 
         // Verify meter exists
-        Meters.selectAll().where { Meters.deviceId eq meterPayment.meterId }
+        Meters.selectAll().where { Meters.meterId eq meterPayment.meterId }
             .singleOrNull() ?: throw IllegalArgumentException("Meter not found")
 
         MeterPayments.insert {

@@ -8,7 +8,7 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 
 object Meters : Table() {
-    val deviceId = varchar("device_id", 100).uniqueIndex()
+    val meterId = varchar("device_id", 100).uniqueIndex()
     val name = varchar("name", 255)
     val productName = varchar("product_name", 255).nullable()
     val description = text("description").nullable()
@@ -16,11 +16,11 @@ object Meters : Table() {
     val active = bool("active").default(true)
     val createdAt = datetime("created_at")
     val updatedAt = datetime("updated_at")
-    override val primaryKey = PrimaryKey(deviceId, name = "PK_Meter_DeviceId")
+    override val primaryKey = PrimaryKey(meterId, name = "PK_Meter_DeviceId")
 }
 
 data class Meter(
-    val deviceId: String,
+    val meterId: String,
     val name: String,
     val productName: String?,
     val description: String?,
@@ -30,11 +30,20 @@ data class Meter(
     val updatedAt: LocalDateTime
 )
 
+data class MeterCreationRequest(
+    val meterId: String,
+    val name: String,
+    val productName: String? = null,
+    val description: String? = null,
+    val location: String? = null,
+    val active: Boolean = true
+)
+
 
 object MeterPayments : Table() {
     val id = integer("id").autoIncrement()
     val userId = reference("user_id", Users.userId).nullable()
-    val meterId = reference("meter_id", Meters.deviceId)
+    val meterId = reference("meter_id", Meters.meterId)
     val mpesaTransactionId = reference("mpesa_transaction_id", MpesaTransactions.id).nullable()
     val amount = decimal("amount", 10, 2)
     val unitsAdded = decimal("units_added", 10, 2).nullable()
