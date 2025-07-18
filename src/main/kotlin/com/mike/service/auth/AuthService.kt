@@ -30,13 +30,13 @@ class AuthService(
             return null
         }
 
-        // Generate new refresh token
+        // Generate a new refresh token
         val newRefreshToken = authRepository.updateRefreshToken(userId)
         if (newRefreshToken == null) {
             return null
         }
 
-        // Generate new access token
+        // Generate a new access token
         val newAccessToken = generateAccessTokenForUser(userId)
         if (newAccessToken == null) {
             return null

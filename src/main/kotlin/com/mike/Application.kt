@@ -11,7 +11,6 @@ import com.mike.service.meter.MeterService
 import com.mike.service.meter.MeterUserService
 //import com.mike.service.mpesa.MpesaService
 import com.mike.service.user.UserService
-import com.mike.tuya.service.SmartMeterService
 import io.github.cdimascio.dotenv.dotenv
 import io.ktor.server.application.*
 import io.ktor.server.auth.Authentication
@@ -63,11 +62,10 @@ fun Application.module() {
 //    val mpesaService = get<MpesaService>()
 
     val userRepository = get<UserRepository>()
-    val smartMeterService = SmartMeterService(accessId, accessSecret, endpoint = endpoint)
 
     configureSerialization()
     configureSwagger()
 
     //configureSecurity(userService)
-    configureRouting( userService,  smartMeterService, authService, meterService, meterUserService)
+    configureRouting( userService,  authService, meterService, meterUserService)
 }

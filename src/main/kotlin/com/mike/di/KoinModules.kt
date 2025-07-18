@@ -45,8 +45,6 @@ val appModule = module {
     single<MeterUserAssignmentRepository> { MeterUserAssignmentRepositoryImpl(get(), get()) }
 
 
-
-
     single { AuthService(get(), get()) }
 
     single<MeterPaymentRepository> { MeterPaymentRepositoryImpl() }

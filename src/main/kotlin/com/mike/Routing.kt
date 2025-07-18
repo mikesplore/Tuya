@@ -31,7 +31,7 @@ data class ErrorResponse(
     val message: String
 )
 
-fun Application.configureRouting(userService: UserService,  smartMeterService: SmartMeterService, authService: AuthService, meterService: MeterService, meterUserService: MeterUserService) {
+fun Application.configureRouting(userService: UserService, authService: AuthService, meterService: MeterService, meterUserService: MeterUserService) {
     // Install CORS
     install(CORS) {
         anyHost()
