@@ -3,13 +3,19 @@ package com.mike.domain.repository.meter
 import com.mike.domain.model.meter.Meter
 import com.mike.domain.model.meter.MeterCreationRequest
 import com.mike.domain.model.meter.Meters
+import com.mike.tuya.TuyaRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.time.LocalDateTime
 
-class MeterRepositoryImpl : MeterRepository {
+class MeterRepositoryImpl(
+    private val tuyaRepository: TuyaRepository
 
+) : MeterRepository {
+    val scope = CoroutineScope(Dispatchers.IO)
     override fun findById(id: String): Meter? = transaction {
         Meters.selectAll().where { Meters.meterId eq id }
             .singleOrNull()
@@ -19,15 +25,48 @@ class MeterRepositoryImpl : MeterRepository {
     }
 
     override fun getAllMeters(): List<Meter> = transaction {
-        Meters.selectAll()
-            .map { resultRow ->
-                mapToMeter(resultRow)
+        // Fetch all meters from the database first
+        val meters = Meters.selectAll().map { resultRow ->
+            mapToMeter(resultRow)
+        }
+        // Fetch online devices from Tuya and update the database in the background
+        scope.launch {
+            val onlineDevices = tuyaRepository.fetchOnlineDevices()
+            transaction {
+                onlineDevices.forEach { meter ->
+                    val exists = Meters.selectAll().where { Meters.meterId eq meter.meterId }.any()
+                    if (exists) {
+                        Meters.update({ Meters.meterId eq meter.meterId }) {
+                            it[online] = meter.online
+                            it[balance] = meter.balance
+                            it[totalEnergy] = meter.totalEnergy
+                            it[price] = meter.price
+                            it[chargeEnergy] = meter.chargeEnergy
+                            it[switchPrepayment] = meter.switchPrepayment
+                            it[updatedAtLong] = meter.updatedAt
+                        }
+                    } else {
+                        Meters.insert {
+                            it[meterId] = meter.meterId
+                            it[name] = meter.name
+                            it[productName] = meter.productName
+                            it[online] = meter.online
+                            it[balance] = meter.balance
+                            it[totalEnergy] = meter.totalEnergy
+                            it[price] = meter.price
+                            it[chargeEnergy] = meter.chargeEnergy
+                            it[switchPrepayment] = meter.switchPrepayment
+                            it[updatedAtLong] = meter.updatedAt
+                        }
+                    }
+                }
             }
+        }
+        meters
     }
 
     override fun createMeter(meter: MeterCreationRequest): String? {
         return transaction {
-            val now = LocalDateTime.now()
             val exists = Meters.selectAll().where { Meters.meterId eq meter.meterId }.any()
             if (exists) {
                 return@transaction "Meter already exists."
@@ -36,11 +75,13 @@ class MeterRepositoryImpl : MeterRepository {
                 it[meterId] = meter.meterId
                 it[name] = meter.name
                 it[productName] = meter.productName
-                it[description] = meter.description
-                it[location] = meter.location
-                it[active] = meter.active
-                it[createdAt] = now
-                it[updatedAt] = now
+                it[online] = false
+                it[balance] = null
+                it[totalEnergy] = null
+                it[price] = null
+                it[chargeEnergy] = null
+                it[switchPrepayment] = null
+                it[updatedAtLong] = null
             }
             null
         }
@@ -48,15 +89,10 @@ class MeterRepositoryImpl : MeterRepository {
 
     override fun updateMeter(meter: MeterCreationRequest) {
         transaction {
-            val now = LocalDateTime.now()
-
             Meters.update({ Meters.meterId eq meter.meterId }) {
                 it[name] = meter.name
                 it[productName] = meter.productName
-                it[description] = meter.description
-                it[location] = meter.location
-                it[active] = meter.active
-                it[updatedAt] = now
+                // Only update static fields from creation request
             }
         }
     }
@@ -71,11 +107,13 @@ class MeterRepositoryImpl : MeterRepository {
             meterId = row[Meters.meterId],
             name = row[Meters.name],
             productName = row[Meters.productName],
-            description = row[Meters.description],
-            location = row[Meters.location],
-            active = row[Meters.active],
-            createdAt = row[Meters.createdAt],
-            updatedAt = row[Meters.updatedAt]
+            online = row[Meters.online],
+            balance = row[Meters.balance],
+            totalEnergy = row[Meters.totalEnergy],
+            price = row[Meters.price],
+            chargeEnergy = row[Meters.chargeEnergy],
+            switchPrepayment = row[Meters.switchPrepayment],
+            updatedAt = row[Meters.updatedAtLong]
         )
     }
 }

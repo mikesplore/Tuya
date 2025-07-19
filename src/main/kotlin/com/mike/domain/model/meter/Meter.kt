@@ -11,11 +11,13 @@ object Meters : Table() {
     val meterId = varchar("device_id", 100).uniqueIndex()
     val name = varchar("name", 255)
     val productName = varchar("product_name", 255).nullable()
-    val description = text("description").nullable()
-    val location = varchar("location", 255).nullable()
-    val active = bool("active").default(true)
-    val createdAt = datetime("created_at")
-    val updatedAt = datetime("updated_at")
+    val online = bool("online").default(false)
+    val balance = integer("balance").nullable()
+    val totalEnergy = integer("total_energy").nullable()
+    val price = integer("price").nullable()
+    val chargeEnergy = integer("charge_energy").nullable()
+    val switchPrepayment = bool("switch_prepayment").nullable()
+    val updatedAtLong = long("updated_at_long").nullable()
     override val primaryKey = PrimaryKey(meterId, name = "PK_Meter_DeviceId")
 }
 
@@ -23,11 +25,13 @@ data class Meter(
     val meterId: String,
     val name: String,
     val productName: String?,
-    val description: String?,
-    val location: String?,
-    val active: Boolean,
-    val createdAt: LocalDateTime,
-    val updatedAt: LocalDateTime
+    val online: Boolean = false,
+    val balance: Int? = null,
+    val totalEnergy: Int? = null,
+    val price: Int? = null,
+    val chargeEnergy: Int? = null,
+    val switchPrepayment: Boolean? = null,
+    val updatedAt: Long? = null
 )
 
 data class MeterCreationRequest(

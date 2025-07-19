@@ -1,0 +1,270 @@
+openapi: 3.0.0
+info:
+  title: Tuya API
+  version: 1.0.0
+paths:
+  /tuya/devices:
+    get:
+      summary: Fetch online Tuya devices
+      description: Returns a list of online devices from Tuya Cloud.
+      responses:
+        '200':
+          description: List of online devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TuyaDevice'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+  /tuya/meters/{meterId}/charge:
+    post:
+      summary: Charge a meter
+      description: Adds energy units to a prepaid meter.
+      parameters:
+        - name: meterId
+          in: path
+          required: true
+          description: The ID of the meter to charge
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: float
+                  description: Amount of energy units to add
+                userId:
+                  type: integer
+                  description: Optional user ID to track who made the charge
+              required:
+                - amount
+      responses:
+        '200':
+          description: Meter charged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meter'
+        '400':
+          description: Bad request
+        '404':
+          description: Meter not found
+        '500':
+          description: Internal server error
+  /tuya/meters/{meterId}/rate:
+    post:
+      summary: Set meter rate
+      description: Updates the price per unit for a meter.
+      parameters:
+        - name: meterId
+          in: path
+          required: true
+          description: The ID of the meter to update
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                price:
+                  type: integer
+                  description: New price per unit
+              required:
+                - price
+      responses:
+        '200':
+          description: Meter rate updated successfully
+        '400':
+          description: Missing or invalid parameters
+        '500':
+          description: Failed to update meter rate
+    get:
+      summary: Get meter rate
+      description: Returns the current price per unit for a meter.
+      parameters:
+        - name: meterId
+          in: path
+          required: true
+          description: The ID of the meter to query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current rate
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rate:
+                    type: integer
+        '400':
+          description: Missing meterId
+  /tuya/meters/{meterId}/balance:
+    get:
+      summary: Get meter balance
+      description: Returns the current balance for a meter.
+      parameters:
+        - name: meterId
+          in: path
+          required: true
+          description: The ID of the meter to query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    type: integer
+        '400':
+          description: Missing meterId
+  /tuya/meters/{meterId}/prepayment:
+    post:
+      summary: Toggle prepayment mode
+      description: Enables or disables prepayment mode for a meter.
+      parameters:
+        - name: meterId
+          in: path
+          required: true
+          description: The ID of the meter to update
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                  description: Whether prepayment mode should be enabled
+              required:
+                - enabled
+      responses:
+        '200':
+          description: Prepayment mode updated successfully
+        '400':
+          description: Missing or invalid parameters
+        '500':
+          description: Failed to update prepayment mode
+  /tuya/meters/{meterId}/history:
+    get:
+      summary: Get meter payment history
+      description: Returns the payment/charging history for a meter.
+      parameters:
+        - name: meterId
+          in: path
+          required: true
+          description: The ID of the meter to query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of payment records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MeterPayment'
+        '400':
+          description: Missing meterId
+components:
+  schemas:
+    TuyaDevice:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        online:
+          type: boolean
+      required:
+        - id
+        - name
+        - online
+    Meter:
+      type: object
+      properties:
+        meterId:
+          type: string
+        name:
+          type: string
+        productName:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - meterId
+        - name
+        - active
+        - createdAt
+        - updatedAt
+    MeterPayment:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        meterId:
+          type: string
+        mpesaTransactionId:
+          type: integer
+        amount:
+          type: number
+          format: double
+        unitsAdded:
+          type: number
+          format: double
+        balanceBefore:
+          type: number
+          format: double
+        balanceAfter:
+          type: number
+          format: double
+        paymentDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time

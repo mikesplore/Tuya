@@ -4,13 +4,13 @@ import com.mike.apidocumentation.configureSwagger
 import com.mike.auth.JwtService
 import com.mike.database.DatabaseFactory
 import com.mike.di.appModule
-import com.mike.domain.model.user.RegisterRequest
 import com.mike.domain.repository.user.UserRepository
 import com.mike.service.auth.AuthService
 import com.mike.service.meter.MeterService
 import com.mike.service.meter.MeterUserService
 //import com.mike.service.mpesa.MpesaService
 import com.mike.service.user.UserService
+import com.mike.service.tuya.TuyaService
 import io.github.cdimascio.dotenv.dotenv
 import io.ktor.server.application.*
 import io.ktor.server.auth.Authentication
@@ -59,6 +59,7 @@ fun Application.module() {
     val authService = get<AuthService>()
     val meterService = get<MeterService>()
     val meterUserService = get<MeterUserService>()
+    val tuyaService = get<TuyaService>()
 //    val mpesaService = get<MpesaService>()
 
     val userRepository = get<UserRepository>()
@@ -67,5 +68,5 @@ fun Application.module() {
     configureSwagger()
 
     //configureSecurity(userService)
-    configureRouting( userService,  authService, meterService, meterUserService)
+    configureRouting( userService,  authService, meterService, meterUserService, tuyaService)
 }

@@ -134,7 +134,7 @@ fun Route.authRoutes(authService: AuthService) {
             }
         }
 
-        // POST /auth/logout - Revoke current user's refresh token
+        // POST /auth/logout - Revoke the current user's refresh token
         post("/logout") {
             scope.launch {
                 try {
