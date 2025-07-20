@@ -17,7 +17,7 @@ interface UserRepository {
      * @param email the email address of the user to retrieve
      * @return the user associated with the given email, or null if no user exists
      */
-    fun findByEmail(email: String): User?
+    fun findByEmail(email: String): Profile?
     /**
      * Retrieves a user by their unique ID.
      *

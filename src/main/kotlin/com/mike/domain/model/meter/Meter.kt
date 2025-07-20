@@ -65,7 +65,7 @@ data class MeterPayment(
     val id: Int? = null,
     val userId: Int? = null,
     val meterId: String,
-    val mpesaTransactionId: Int? = null,
+    val mpesaTransactionId: String? = null,
     val amount: BigDecimal,
     val unitsAdded: BigDecimal? = null,
     val balanceBefore: BigDecimal? = null,

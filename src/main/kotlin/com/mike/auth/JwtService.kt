@@ -18,7 +18,7 @@ class JwtService(config: ApplicationConfig) {
     private val accessTokenExpirationMs: Long = 30 * 60 * 1000 // 30 minutes
     private val refreshTokenExpirationMs: Long = 24 * 60 * 60 * 1000 // 24 hours
 
-    private val jwtVerifier: JWTVerifier = JWT
+    val jwtVerifier: JWTVerifier = JWT
         .require(Algorithm.HMAC256(secret))
         .withIssuer(issuer)
         .withAudience(audience)

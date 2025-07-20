@@ -9,7 +9,7 @@ interface MeterPaymentRepository {
     suspend fun getPaymentsByUserId(userId: Int): List<MeterPayment>
     suspend fun getPaymentsByMeterId(meterId: String): List<MeterPayment>
     suspend fun getPaymentsByStatus(status: String): List<MeterPayment>
-    suspend fun getPaymentsByMpesaTransactionId(mpesaTransactionId: Int): MeterPayment?
+    suspend fun getPaymentsByMpesaTransactionId(mpesaTransactionId: String): MeterPayment?
     suspend fun getAllPayments(): List<MeterPayment>
     suspend fun getUserPaymentHistory(userId: Int, limit: Int = 50): List<MeterPayment>
     suspend fun createDirectPayment(meterPayment: MeterPayment)

@@ -187,6 +187,33 @@ paths:
                   $ref: '#/components/schemas/MeterPayment'
         '400':
           description: Missing meterId
+  /tuya/meters/{meterId}/clear:
+    post:
+      summary: Clear meter balance
+      description: Clears the balance for a specific meter.
+      parameters:
+        - name: meterId
+          in: path
+          required: true
+          description: The ID of the meter to clear
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Meter balance cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Missing meterId
+        '404':
+          description: Meter not found
+        '500':
+          description: Failed to clear meter balance
 components:
   schemas:
     TuyaDevice:

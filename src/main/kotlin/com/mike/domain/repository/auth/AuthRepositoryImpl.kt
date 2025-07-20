@@ -43,6 +43,15 @@ class AuthRepositoryImpl(
             .select { Users.userId eq userRow[Users.userId] }
             .singleOrNull()
 
+        // Fetch profile picture URL from profilePictures table
+        var profilePictureUrl: String? = null
+        val profilePictureRow = Profiles
+            .select { Profiles.userId eq userRow[Users.userId] }
+            .singleOrNull()
+        if (profilePictureRow != null) {
+            profilePictureUrl = "/users/${userRow[Users.userId]}/profile-picture"
+        }
+
         if (profileRow == null) {
             Triple(null, null, "Profile not found")
         } else {
@@ -54,6 +63,7 @@ class AuthRepositoryImpl(
                 createdAt = profileRow[Profiles.createdAt],
                 updatedAt = profileRow[Profiles.updatedAt],
                 userRole = profileRow[Users.role],
+                profilePictureUrl = profilePictureUrl
             )
 
             // Build User domain model for JWT

@@ -68,36 +68,9 @@ data class MpesaTransactionTimeoutUpdate(
 data class MpesaTransactionQueryUpdate(
     val checkoutRequestId: String,
     val resultCode: String,
-    val resultDesc: String
-)
-
-// STK Push request model
-data class StkPushRequest(
-    val businessShortCode: String,
-    val password: String,
-    val timestamp: String,
-    val transactionType: String = "CustomerPayBillOnline",
-    val amount: BigDecimal,
-    val partyA: String, // Phone number
-    val partyB: String, // Shortcode
-    val phoneNumber: String,
-    val callBackURL: String,
-    val accountReference: String,
-    val transactionDesc: String
-)
-
-// STK Push response model
-data class StkPushResponse(
-    val merchantRequestID: String?,
-    val checkoutRequestID: String?,
-    val responseCode: String?,
-    val responseDescription: String?,
-    val customerMessage: String?
-)
-
-// Access token request
-data class AccessTokenRequest(
-    val grant_type: String = "client_credentials"
+    val resultDesc: String,
+    val receiptNumber: String,
+    val transactionDate: LocalDateTime?
 )
 
 // Access token response
@@ -106,39 +79,6 @@ data class AccessTokenResponse(
     val expires_in: String
 )
 
-// Callback models
-data class StkCallback(
-    val merchantRequestID: String,
-    val checkoutRequestID: String,
-    val resultCode: Int,
-    val resultDesc: String,
-    val callbackMetadata: CallbackMetadata? = null // This can be null for failed transactions
-)
-
-data class CallbackMetadata(
-    val item: List<CallbackItem>
-)
-
-data class CallbackItem(
-    val name: String,
-    val value: Any?
-)
-
-data class StkCallbackResponse(
-    val body: StkCallbackBody
-)
-
-data class StkCallbackBody(
-    val stkCallback: StkCallback
-)
-
-// Payment request DTOs
-data class PaymentRequest(
-    val amount: BigDecimal,
-    val phoneNumber: String,
-    val meterId: String,
-    val description: String? = null
-)
 
 data class PaymentResponse(
     val success: Boolean,

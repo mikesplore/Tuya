@@ -220,6 +220,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
+  /users/me:
+    get:
+      summary: Get current user's profile
+      description: Retrieve the profile of the currently authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
 components:
   securitySchemes:
     bearerAuth:

@@ -72,6 +72,17 @@ fun Route.tuyaRoutes(tuyaService: TuyaService) {
                 call.respondText("Failed to update prepayment mode", status = HttpStatusCode.InternalServerError)
             }
         }
+
+        post("/meters/{meterId}/clear") {
+            val meterId = call.parameters["meterId"] ?: return@post call.respondText("Missing meterId", status = HttpStatusCode.BadRequest)
+            val result = tuyaService.clearBalance(meterId)
+            if (result) {
+                call.respond(mapOf("message" to "Meter balance cleared successfully"))
+            } else {
+                call.respondText("Failed to clear meter balance", status = HttpStatusCode.InternalServerError)
+            }
+        }
+
         get("/meters/{meterId}/history") {
             val meterId = call.parameters["meterId"] ?: return@get call.respondText("Missing meterId", status = HttpStatusCode.BadRequest)
             val history = tuyaService.getMeterHistory(meterId)

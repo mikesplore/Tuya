@@ -8,7 +8,7 @@ import com.mike.domain.repository.user.UserRepository
 import com.mike.service.auth.AuthService
 import com.mike.service.meter.MeterService
 import com.mike.service.meter.MeterUserService
-//import com.mike.service.mpesa.MpesaService
+import com.mike.service.mpesa.MpesaService
 import com.mike.service.user.UserService
 import com.mike.service.tuya.TuyaService
 import io.github.cdimascio.dotenv.dotenv
@@ -51,22 +51,17 @@ fun Application.module() {
         jwtService.configureJwtAuthentication(appConfig, this)
     }
 
-    val accessId = dotenv["ACCESS_ID"]
-    val accessSecret = dotenv["ACCESS_SECRET"]
-    val endpoint = dotenv["TUYA_ENDPOINT"]
 
     val userService = get<UserService>()
     val authService = get<AuthService>()
     val meterService = get<MeterService>()
     val meterUserService = get<MeterUserService>()
     val tuyaService = get<TuyaService>()
-//    val mpesaService = get<MpesaService>()
-
-    val userRepository = get<UserRepository>()
+    val mpesaService = get<MpesaService>()
 
     configureSerialization()
     configureSwagger()
 
     //configureSecurity(userService)
-    configureRouting( userService,  authService, meterService, meterUserService, tuyaService)
+    configureRouting( userService,  authService, meterService, meterUserService, tuyaService, mpesaService, jwtService)
 }

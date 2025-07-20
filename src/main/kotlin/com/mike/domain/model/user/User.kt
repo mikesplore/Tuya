@@ -139,6 +139,11 @@ data class User(
     val id: Int? = null,
     val email: String,
     val passwordHash: String,
-    val role: String = "USER",
+    val role: String = UserRole.USER.name,
     val active: Boolean = true
 )
+
+enum class UserRole {
+    ADMIN,
+    USER,
+}

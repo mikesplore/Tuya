@@ -18,7 +18,17 @@ interface MpesaRepository {
         accountReference: String,
         description: String
     ): StkPushResponse
-    
+
+    suspend fun initiatePayment(
+        amount: BigDecimal,
+        phoneNumber: String,
+        meterId: String,
+        userId: Int,
+        accountReference: String = "MeterPayment",
+        description: String = "Meter top-up payment",
+        maxRetries: Int = 2
+    ): PaymentResponse
+
     // Utility functions
     fun generateMpesaPassword(shortCode: String, passkey: String, timestamp: String): String
     fun generateTimestamp(): String

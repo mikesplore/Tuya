@@ -58,4 +58,7 @@ interface TuyaRepository {
      * @return A list of payment records for the meter
      */
     suspend fun getMeterHistory(meterId: String): List<MeterPayment>
+
+
+    suspend fun clearBalance(meterId: String): Boolean
 }

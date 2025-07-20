@@ -104,6 +104,16 @@ class TuyaService(
         }
     }
 
+    suspend fun clearBalance(meterId: String): Boolean {
+        logger.info("Clearing balance for meter $meterId")
+        return try {
+            repository.clearBalance(meterId)
+        } catch (e: Exception) {
+            logger.error("Error clearing meter balance: ${e.message}", e)
+            false
+        }
+    }
+
     /**
      * Get payment history for a meter
      *

@@ -362,6 +362,57 @@ class TuyaRepositoryImpl(
         }
     }
 
+    override suspend fun clearBalance(meterId: String): Boolean {
+        try {
+            auth.ensureValidToken()
+            val timestamp = System.currentTimeMillis().toString()
+            val nonce = generateNonce()
+
+            val path = "/v1.0/devices/$meterId/commands"
+            val commandBody = """
+                {
+                  "commands": [
+                    {
+                      "code": "clear_energy",
+                      "value": true
+                    }
+                  ]
+                }
+            """.trimIndent()
+
+            val headers = auth.createAuthHeaders(
+                method = "POST",
+                url = path,
+                timestamp = timestamp,
+                nonce = nonce,
+                accessToken = auth.getCurrentAccessToken(),
+                body = commandBody
+            )
+
+            val response: HttpResponse = client.post("${config.tuyaEndpoint}$path") {
+                headers.forEach { (key, value) ->
+                    header(key, value)
+                }
+                contentType(ContentType.Application.Json)
+                setBody(commandBody)
+            }
+
+            val responseBody = response.bodyAsText()
+            val jsonResponse = JsonParser.parseString(responseBody).asJsonObject
+            val success = jsonResponse.get("success").asBoolean
+
+            if (success) {
+                return true
+            } else {
+                logger.error("Failed to clear balance: ${jsonResponse.get("msg").asString}")
+                return false
+            }
+        } catch (e: Exception) {
+            logger.error("Error clearing balance", e)
+        }
+        return false
+    }
+
     private fun generateNonce(): String =
         (1..32).map { "0123456789abcdef".random() }.joinToString("")
 }

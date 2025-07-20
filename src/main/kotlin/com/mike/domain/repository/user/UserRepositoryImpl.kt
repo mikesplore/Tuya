@@ -12,13 +12,13 @@ class UserRepositoryImpl(
     private val authRepository: AuthRepository
 ) : UserRepository {
 
-    override fun findByEmail(email: String): User? = transaction {
+    override fun findByEmail(email: String): Profile? = transaction {
         try {
             (Users innerJoin Profiles)
                 .selectAll().where { Users.email eq email }
                 .singleOrNull()
                 ?.let { resultRow ->
-                    mapToUser(resultRow)
+                    mapToProfile(resultRow)
                 }
         } catch (e: Exception) {
             println("Error finding user by email: ${e.message}")

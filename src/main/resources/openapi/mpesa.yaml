@@ -1,0 +1,191 @@
+openapi: 3.0.0
+info:
+  title: Mpesa API
+  version: 1.0.0
+paths:
+  /mpesa/payment:
+    post:
+      summary: Initiate Mpesa payment
+      description: Initiates an Mpesa STK push payment for a meter.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: float
+                  description: Amount to pay
+                phoneNumber:
+                  type: string
+                  description: Phone number to charge
+                meterId:
+                  type: string
+                  description: Meter ID
+                userId:
+                  type: integer
+                  description: User ID
+                accountReference:
+                  type: string
+                  description: Account reference
+                description:
+                  type: string
+                  description: Payment description
+              required:
+                - amount
+                - phoneNumber
+                - meterId
+                - userId
+      responses:
+        '200':
+          description: Payment initiation response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+
+  /mpesa/status/{checkoutRequestId}:
+    get:
+      summary: Get Mpesa payment status
+      description: Returns the status of a payment by checkoutRequestId.
+      parameters:
+        - name: checkoutRequestId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MpesaTransaction'
+        '404':
+          description: Transaction not found
+        '500':
+          description: Internal server error
+
+  /mpesa/callback:
+    post:
+      summary: M-Pesa STK Push callback endpoint
+      description: Endpoint that receives callbacks from the M-Pesa API after an STK push transaction is completed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StkCallbackResponse'
+      responses:
+        '200':
+          description: Callback processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ResultCode:
+                    type: integer
+                  ResultDesc:
+                    type: string
+
+  /mpesa/transactions:
+    get:
+      summary: Get all Mpesa transactions
+      description: Returns a list of all Mpesa transactions.
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MpesaTransaction'
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    PaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        merchantRequestId:
+          type: string
+          nullable: true
+        checkoutRequestId:
+          type: string
+          nullable: true
+        mpesaTransactionId:
+          type: string
+          nullable: true
+
+    MpesaTransaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        phoneNumber:
+          type: string
+        amount:
+          type: number
+          format: float
+        merchantRequestId:
+          type: string
+        checkoutRequestId:
+          type: string
+        responseCode:
+          type: string
+        responseDescription:
+          type: string
+        customerMessage:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    StkCallbackResponse:
+      type: object
+      properties:
+        body:
+          type: object
+          properties:
+            stkCallback:
+              type: object
+              properties:
+                merchantRequestID:
+                  type: string
+                checkoutRequestID:
+                  type: string
+                resultCode:
+                  type: integer
+                resultDesc:
+                  type: string
+                callbackMetadata:
+                  type: object
+                  nullable: true
+                  properties:
+                    item:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          value:
+                            type: object

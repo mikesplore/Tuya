@@ -38,6 +38,7 @@ fun Route.authRoutes(authService: AuthService) {
                 val (profile, accessToken, refreshToken) = authService.login(loginCredentials)
 
                 if (profile != null && accessToken != null && refreshToken != null) {
+                    println("Login response: $profile, accessToken: $accessToken, refreshToken: $refreshToken")
                     call.respond(
                         HttpStatusCode.OK,
                         LoginResponse(
@@ -48,7 +49,7 @@ fun Route.authRoutes(authService: AuthService) {
                     )
                 } else {
                     call.respond(
-                        HttpStatusCode.Unauthorized,
+                        HttpStatusCode.BadRequest,
                         ErrorResponse("Invalid credentials")
                     )
                 }

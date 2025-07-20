@@ -1,15 +1,16 @@
 package com.mike
 
-//import com.mike.routes.deviceRoutes
-//import com.mike.routes.mpesaRoutes
+import com.mike.auth.JwtService
 import com.mike.routes.authRoutes
 import com.mike.routes.meterRoutes
 import com.mike.routes.meterUserRoutes
+import com.mike.routes.mpesaRoutes
 import com.mike.routes.tuyaRoutes
 import com.mike.service.auth.AuthService
 import com.mike.routes.userRoutes
 import com.mike.service.meter.MeterService
 import com.mike.service.meter.MeterUserService
+import com.mike.service.mpesa.MpesaService
 //import com.mike.service.meter.MeterService
 //import com.mike.service.mpesa.MpesaService
 import com.mike.service.user.UserService
@@ -35,7 +36,9 @@ fun Application.configureRouting(
     authService: AuthService,
     meterService: MeterService,
     meterUserService: MeterUserService,
-    tuyaService: TuyaService
+    tuyaService: TuyaService,
+    mpesaService: MpesaService,
+    jwtService: JwtService
 ) {
     // Install CORS
     install(CORS) {
@@ -73,19 +76,14 @@ fun Application.configureRouting(
         get("/") {
             call.respondText("Tuya Smart Meter API - Ktor Backend")
         }
-//
-//        // Mpesa routes
-//        mpesaRoutes(
-//            mpesaService,
-//            userService,
-//            meterService
-//        )
+        // Public routes
 
         // User management routes (protected)
-        userRoutes(userService)
+        userRoutes(userService, jwtService)
         authRoutes(authService)
         meterRoutes(meterService)
         meterUserRoutes(meterUserService)
         tuyaRoutes(tuyaService)
+        mpesaRoutes(mpesaService)
     }
 }

@@ -24,16 +24,25 @@ class MeterPaymentRepositoryImpl : MeterPaymentRepository {
                 .singleOrNull() ?: throw IllegalArgumentException("User not found")
         }
 
-        // Verify mpesa transactions exist if mpesaTransactionId is provided
-        if (meterPayment.mpesaTransactionId != null) {
-            MpesaTransactions.selectAll().where { MpesaTransactions.id eq meterPayment.mpesaTransactionId }
-                .singleOrNull() ?: throw IllegalArgumentException("M-Pesa transaction not found")
+        // Get transaction ID from checkoutRequestId
+        val mpesaTransactionIdValue = if (meterPayment.mpesaTransactionId != null) {
+            val mpesaTransaction = MpesaTransactions.selectAll()
+                .where { MpesaTransactions.checkoutRequestId eq meterPayment.mpesaTransactionId }
+                .singleOrNull()
+
+            if (mpesaTransaction == null) {
+                throw IllegalArgumentException("M-Pesa transaction not found")
+            }
+
+            mpesaTransaction[MpesaTransactions.id]
+        } else {
+            null
         }
 
         MeterPayments.insert {
             it[userId] = meterPayment.userId
             it[meterId] = meterPayment.meterId
-            it[mpesaTransactionId] = meterPayment.mpesaTransactionId
+            it[mpesaTransactionId] = mpesaTransactionIdValue
             it[amount] = meterPayment.amount
             it[unitsAdded] = meterPayment.unitsAdded
             it[balanceBefore] = meterPayment.balanceBefore
@@ -77,8 +86,19 @@ class MeterPaymentRepositoryImpl : MeterPaymentRepository {
             .map { mapToMeterPayment(it) }
     }
 
-    override suspend fun getPaymentsByMpesaTransactionId(mpesaTransactionId: Int): MeterPayment? = transaction {
-        MeterPayments.selectAll().where { MeterPayments.mpesaTransactionId eq mpesaTransactionId }
+    override suspend fun getPaymentsByMpesaTransactionId(mpesaTransactionId: String): MeterPayment? = transaction {
+        // First, find the mpesa transaction ID (integer) from the checkoutRequestId (string)
+        val mpesaTransaction = MpesaTransactions.selectAll()
+            .where { MpesaTransactions.checkoutRequestId eq mpesaTransactionId }
+            .singleOrNull()
+
+        if (mpesaTransaction == null) return@transaction null
+
+        val transactionId = mpesaTransaction[MpesaTransactions.id]
+
+        // Now find the payment using the integer ID
+        MeterPayments.selectAll()
+            .where { MeterPayments.mpesaTransactionId eq transactionId }
             .firstOrNull()?.let { mapToMeterPayment(it) }
     }
 
@@ -118,11 +138,18 @@ class MeterPaymentRepositoryImpl : MeterPaymentRepository {
     }}
 
     private fun mapToMeterPayment(row: ResultRow): MeterPayment {
+        // Get the checkoutRequestId from mpesaTransactionId
+        val checkoutRequestId = row[MeterPayments.mpesaTransactionId]?.let { mpesaTransactionId ->
+            MpesaTransactions.selectAll()
+                .where { MpesaTransactions.id eq mpesaTransactionId }
+                .singleOrNull()?.get(MpesaTransactions.checkoutRequestId)
+        }
+
         return MeterPayment(
             id = row[MeterPayments.id],
             userId = row[MeterPayments.userId],
             meterId = row[MeterPayments.meterId],
-            mpesaTransactionId = row[MeterPayments.mpesaTransactionId],
+            mpesaTransactionId = checkoutRequestId,
             amount = row[MeterPayments.amount],
             unitsAdded = row[MeterPayments.unitsAdded],
             balanceBefore = row[MeterPayments.balanceBefore],
