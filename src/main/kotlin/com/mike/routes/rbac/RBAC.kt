@@ -18,7 +18,7 @@ suspend fun extractUserRoleFromToken(call: ApplicationCall, jwtService: JwtServi
     return try {
         val jwt = jwtService.jwtVerifier.verify(accessToken)
         val role = jwt.getClaim("role").asString()
-        println("Extracted role from token: $role for path: ${call.request.path()}")
+    //    println("Extracted role from token: $role for path: ${call.request.path()}")
         if (role.isNullOrEmpty()) {
             call.respondText("Invalid token for $role", status = HttpStatusCode.Unauthorized)
             null
@@ -44,7 +44,7 @@ suspend fun extractUserEmailFromToken(call: ApplicationCall, jwtService: JwtServ
     return try {
         val jwt = jwtService.jwtVerifier.verify(accessToken)
         val email = jwt.getClaim("email").asString()
-        println("Extracted email from token: $email for path: ${call.request.path()}")
+      //  println("Extracted email from token: $email for path: ${call.request.path()}")
         if (email.isNullOrEmpty()) {
             call.respondText("Invalid token for $email", status = HttpStatusCode.Unauthorized)
             null
@@ -66,14 +66,14 @@ suspend fun withRole(
 ) {
     try {
         val userRole = extractUserRoleFromToken(call, jwtService)
-        println("Fetched user role: ${userRole ?: "Unknown"} for path: ${call.request.path()}")
+      //  println("Fetched user role: ${userRole ?: "Unknown"} for path: ${call.request.path()}")
         if (userRole == null || userRole !in allowedRoles) {
             call.respondText("Access denied", status = HttpStatusCode.Forbidden)
             return
         }
         handler()
     } catch (e: Exception) {
-        println("Error in withRole for path ${call.request.path()}: ${e.message}")
+       // println("Error in withRole for path ${call.request.path()}: ${e.message}")
         call.respondText(
             "Internal server error: ${e.message}",
             status = HttpStatusCode.InternalServerError

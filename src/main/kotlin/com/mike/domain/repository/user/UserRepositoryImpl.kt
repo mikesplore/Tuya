@@ -40,7 +40,7 @@ class UserRepositoryImpl(
         }
     }
 
-    override fun fundUserProfile(userId: Int): Profile? = transaction {
+    override fun findUserProfile(userId: Int): Profile? = transaction {
         try {
             (Profiles innerJoin Users)
                 .selectAll().where { Profiles.userId eq userId }

@@ -35,25 +35,26 @@ fun Route.authRoutes(authService: AuthService) {
                     password = request.password
                 )
 
-                val (profile, accessToken, refreshToken) = authService.login(loginCredentials)
+                val (profile, tokenPayload, error) = authService.login(loginCredentials)
 
-                if (profile != null && accessToken != null && refreshToken != null) {
-                    println("Login response: $profile, accessToken: $accessToken, refreshToken: $refreshToken")
+                if (profile != null && tokenPayload != null) {
+                    println("Login response: $profile, $tokenPayload")
                     call.respond(
                         HttpStatusCode.OK,
                         LoginResponse(
                             profile = profile,
-                            accessToken = accessToken,
-                            refreshToken = refreshToken
+                            tokenPayload = tokenPayload,
+                            error = error
                         )
                     )
                 } else {
                     call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse("Invalid credentials")
+                        ErrorResponse(error?: "Invalid login credentials")
                     )
                 }
             } catch (e: Exception) {
+                println("Login error: ${e.message}")
                 call.respond(
                     HttpStatusCode.BadRequest,
                     ErrorResponse("Invalid request format")
@@ -82,6 +83,7 @@ fun Route.authRoutes(authService: AuthService) {
                     )
                 }
             } catch (e: Exception) {
+                println("Error during token refresh: ${e.message}")
                 call.respond(
                     HttpStatusCode.BadRequest,
                     ErrorResponse("Invalid request format")

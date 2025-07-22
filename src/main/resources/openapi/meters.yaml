@@ -10,6 +10,8 @@ paths:
     get:
       summary: Get all meters
       description: Retrieve a list of all meters.
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: List of meters
@@ -22,6 +24,8 @@ paths:
     post:
       summary: Create a new meter
       description: Create a new meter. Returns 400 if a meter with the same id already exists.
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -178,3 +182,8 @@ components:
           type: string
       required:
         - message
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

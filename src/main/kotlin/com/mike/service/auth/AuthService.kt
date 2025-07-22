@@ -15,7 +15,7 @@ class AuthService(
     private val jwtService: JwtService
 ) {
 
-    fun login(loginCredentials: LoginCredentials): Triple<Profile?, String?, String?> {
+    fun login(loginCredentials: LoginCredentials): Triple<Profile?, TokenPayload?, String?> {
         return authRepository.login(loginCredentials)
     }
 

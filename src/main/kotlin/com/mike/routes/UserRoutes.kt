@@ -64,6 +64,7 @@ fun Route.userRoutes(userService: UserService, jwtService: JwtService) {
                         val user = userService.getUserByEmail(registerRequest.email)
                         call.respond(HttpStatusCode.Created, user!!)
                     } else {
+                        println("Error creating user: $error")
                         call.respond(HttpStatusCode.BadRequest, mapOf("message" to error))
                     }
 

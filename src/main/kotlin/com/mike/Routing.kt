@@ -11,8 +11,6 @@ import com.mike.routes.userRoutes
 import com.mike.service.meter.MeterService
 import com.mike.service.meter.MeterUserService
 import com.mike.service.mpesa.MpesaService
-//import com.mike.service.meter.MeterService
-//import com.mike.service.mpesa.MpesaService
 import com.mike.service.user.UserService
 import com.mike.service.tuya.TuyaService
 import io.ktor.client.*
@@ -25,6 +23,12 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
+import io.ktor.server.response.*
 
 data class ErrorResponse(
     val error: String,
@@ -43,6 +47,7 @@ fun Application.configureRouting(
     // Install CORS
     install(CORS) {
         anyHost()
+        allowCredentials = true
         allowMethod(HttpMethod.Options)
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Post)
@@ -77,13 +82,16 @@ fun Application.configureRouting(
             call.respondText("Tuya Smart Meter API - Ktor Backend")
         }
         // Public routes
-
-        // User management routes (protected)
-        userRoutes(userService, jwtService)
         authRoutes(authService)
-        meterRoutes(meterService)
-        meterUserRoutes(meterUserService)
-        tuyaRoutes(tuyaService)
-        mpesaRoutes(mpesaService)
+    }
+
+    routing {
+        authenticate("auth-jwt") {
+            userRoutes(userService, jwtService)
+            meterRoutes(meterService)
+            meterUserRoutes(meterUserService)
+            tuyaRoutes(tuyaService)
+            mpesaRoutes(mpesaService)
+        }
     }
 }

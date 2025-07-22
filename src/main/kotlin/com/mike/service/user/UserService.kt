@@ -16,7 +16,7 @@ class UserService(
     }
 
     fun getUserProfile(userId: Int): Profile? {
-        return userRepository.fundUserProfile(userId)
+        return userRepository.findUserProfile(userId)
     }
     
     fun getAllUsers(): List<Profile> {

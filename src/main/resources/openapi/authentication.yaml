@@ -23,8 +23,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
-        '401':
-          description: Invalid credentials
+        '400':
+          description: Invalid login credentials or request format
           content:
             application/json:
               schema:
@@ -45,7 +45,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenPayload'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TokenPayload'
+                  message:
+                    type: string
+                    example: "Token refreshed successfully"
         '401':
           description: Invalid or expired refresh token
           content:
@@ -68,7 +74,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VerifyTokenResponse'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/VerifyTokenResponse'
+                  message:
+                    type: string
+                    example: "Token verification result"
         '400':
           description: Invalid request format
           content:
@@ -91,7 +103,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResponse'
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Token revoked successfully"
         '404':
           description: Token not found
           content:
@@ -114,7 +130,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResponse'
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
         '400':
           description: Failed to logout
           content:
@@ -133,7 +153,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResponse'
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "All user tokens revoked successfully"
         '400':
           description: Failed to revoke tokens
           content:
@@ -164,7 +188,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResponse'
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password changed successfully"
         '400':
           description: Failed to change password
           content:
@@ -200,15 +228,37 @@ components:
       type: object
       properties:
         profile:
-          type: object
-        accessToken:
+          $ref: '#/components/schemas/Profile'
+        tokenPayload:
+          $ref: '#/components/schemas/TokenPayload'
+        error:
           type: string
-        refreshToken:
-          type: string
+          nullable: true
       required:
         - profile
-        - accessToken
-        - refreshToken
+        - tokenPayload
+    Profile:
+      type: object
+      properties:
+        userId:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phoneNumber:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        userRole:
+          type: string
+        profilePictureUrl:
+          type: string
+          nullable: true
     TokenPayload:
       type: object
       properties:
@@ -264,4 +314,3 @@ components:
           nullable: true
       required:
         - isValid
-

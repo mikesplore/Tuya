@@ -17,6 +17,10 @@ import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
+import com.mike.domain.model.auth.TokenPayload
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.SqlExpressionBuilder
+import org.jetbrains.exposed.sql.selectAll
 
 class AuthRepositoryImpl(
     private val jwtService: JwtService,
@@ -30,7 +34,24 @@ class AuthRepositoryImpl(
         if (rows > 0) true to null else false to "User not found"
     }
 
-    override fun login(loginCredentials: LoginCredentials): Triple<Profile?, String?, String?> = transaction {
+    override fun login(loginCredentials: LoginCredentials): Triple<Profile?, TokenPayload?, String?> = transaction {
+        //check if the fields are not empty
+        if( loginCredentials.email.isBlank() && loginCredentials.password.isBlank()) {
+            return@transaction Triple(null, null, "Email and password cannot be empty")
+        }
+
+        if (!loginCredentials.email.contains("@")) {
+            return@transaction Triple(null, null, "Invalid email format")
+        }
+
+        if(loginCredentials.email.isEmpty()) {
+            return@transaction Triple(null, null, "Email cannot be empty")
+        }
+
+        if(loginCredentials.password.isEmpty()) {
+            return@transaction Triple(null, null, "Password cannot be empty")
+        }
+
         val userRow = Users.selectAll().where { Users.email eq loginCredentials.email }.singleOrNull()
         if (userRow == null) return@transaction Triple(null, null, "User not found")
 
@@ -40,13 +61,13 @@ class AuthRepositoryImpl(
         }
 
         val profileRow = (Users innerJoin Profiles)
-            .select { Users.userId eq userRow[Users.userId] }
+            .selectAll().where { Users.userId eq userRow[Users.userId] }
             .singleOrNull()
 
         // Fetch profile picture URL from profilePictures table
         var profilePictureUrl: String? = null
         val profilePictureRow = Profiles
-            .select { Profiles.userId eq userRow[Users.userId] }
+            .selectAll().where { Profiles.userId eq userRow[Users.userId] }
             .singleOrNull()
         if (profilePictureRow != null) {
             profilePictureUrl = "/users/${userRow[Users.userId]}/profile-picture"
@@ -72,7 +93,6 @@ class AuthRepositoryImpl(
                 email = userRow[Users.email],
                 passwordHash = userRow[Users.passwordHash],
                 role = userRow[Users.role],
-
             )
 
             val accessToken = jwtService.generateAccessToken(user)
@@ -88,7 +108,12 @@ class AuthRepositoryImpl(
                 it[RefreshTokens.createdAt] = now
             }
 
-            Triple(profile, accessToken, refreshToken)
+            val tokenPayload = TokenPayload(
+                accessToken = accessToken,
+                refreshToken = refreshToken
+            )
+
+            Triple(profile, tokenPayload, null)
         }
     }
 

@@ -31,7 +31,7 @@ interface UserRepository {
      * @param userId The unique identifier of the user whose profile is being requested.
      * @return The user's profile if found; otherwise, returns null.
      */
-    fun fundUserProfile(userId: Int): Profile?
+    fun findUserProfile(userId: Int): Profile?
     /**
      * Retrieves the role of a user based on their unique identifier.
      *

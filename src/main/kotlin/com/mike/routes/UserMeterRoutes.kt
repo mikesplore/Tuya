@@ -2,6 +2,7 @@ package com.mike.routes
 
 import com.mike.domain.model.meter.MeterUserAssignment
 import com.mike.service.meter.MeterUserService
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -11,48 +12,112 @@ import io.ktor.server.routing.post
 fun Route.meterUserRoutes(meterUserService: MeterUserService) {
 
     post("/meter-user/assign") {
-        val assignment = call.receive<MeterUserAssignment>()
-        meterUserService.assignMeterToUser(assignment)
-        call.respond(mapOf("success" to true))
+        try {
+            val assignment = call.receive<MeterUserAssignment>()
+            val success = meterUserService.assignMeterToUser(assignment)
+            if (success) {
+                call.respond(mapOf("success" to true))
+            } else {
+                call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Meter has already been assigned to another user"))
+            }
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Failed to assign meter to user: ${e.message}"))
+            e.printStackTrace()
+        }
     }
 
     post("/meter-user/unassign") {
-        val assignment = call.receive<MeterUserAssignment>()
-        meterUserService.unassignMeterFromUser(assignment)
-        call.respond(mapOf("success" to true))
+        try {
+            val assignment = call.receive<MeterUserAssignment>()
+            val success = meterUserService.unassignMeterFromUser(assignment)
+            if (success) {
+                call.respond(mapOf("success" to true))
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Meter was not assigned to this user"))
+            }
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Failed to unassign meter from user: ${e.message}"))
+            e.printStackTrace()
+        }
     }
 
     get("/meter-user/user/{userId}/meters") {
-        val userId = call.parameters["userId"]?.toIntOrNull()
-        if (userId == null) {
-            call.respond(mapOf("error" to "Invalid userId"))
-            return@get
+        try {
+            val userId = call.parameters["userId"]?.toIntOrNull()
+            if (userId == null) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid userId"))
+                return@get
+            }
+            val meters = meterUserService.getAssignedMetersByUser(userId)
+            call.respond(meters)
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get meters for user: ${e.message}"))
+            e.printStackTrace()
         }
-        val meters = meterUserService.getAssignedMetersByUser(userId)
-        call.respond(meters)
+    }
+
+    get("/meter-user/meters/unassigned") {
+        try {
+            val meters = meterUserService.getUnassignedMeters()
+            call.respond(meters)
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get unassigned meters: ${e.message}"))
+            e.printStackTrace()
+        }
     }
 
     get("/meter-user/meter/{meterId}/users") {
-        val meterId = call.parameters["meterId"] ?: ""
-        val users = meterUserService.getUsersByMeter(meterId)
-        call.respond(users)
+        try {
+            val meterId = call.parameters["meterId"] ?: ""
+            val users = meterUserService.getUsersByMeter(meterId)
+            call.respond(users)
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get users for meter: ${e.message}"))
+            e.printStackTrace()
+        }
+    }
+
+    get("/meter-user/meter/{meterId}/user") {
+        try {
+            val meterId = call.parameters["meterId"] ?: ""
+            val user = meterUserService.getUserByMeter(meterId)
+            if (user != null) {
+                call.respond(user)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("message" to "No user is assigned to this meter"))
+            }
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get user for meter: ${e.message}"))
+            e.printStackTrace()
+        }
+    }
+
+    get("/meter-user/meter/{meterId}/users-without") {
+        try {
+            val meterId = call.parameters["meterId"] ?: ""
+            val users = meterUserService.getUsersWithoutMeter(meterId)
+            call.respond(users)
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get users without meter: ${e.message}"))
+            e.printStackTrace()
+        }
     }
 
     get("/meter-user/is-assigned") {
-        val meterId = call.request.queryParameters["meterId"] ?: ""
-        val userId = call.request.queryParameters["userId"]?.toIntOrNull()
-        if (meterId.isBlank() || userId == null) {
-            call.respond(mapOf("error" to "Missing meterId or userId"))
-            return@get
+        try {
+            val meterId = call.request.queryParameters["meterId"] ?: ""
+            val userId = call.request.queryParameters["userId"]?.toIntOrNull()
+            if (meterId.isBlank() || userId == null) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Missing meterId or userId"))
+                return@get
+            }
+            val isAssigned = meterUserService.isMeterAssignedToUser(
+                MeterUserAssignment(meterId, userId)
+            )
+            call.respond(mapOf("isAssigned" to isAssigned))
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to check assignment: ${e.message}"))
+            e.printStackTrace()
         }
-        val isAssigned = meterUserService.isMeterAssignedToUser(
-            MeterUserAssignment(meterId, userId, true)
-        )
-        call.respond(mapOf("isAssigned" to isAssigned))
-    }
-
-    post("/meter-user/generate-assignments") {
-        meterUserService.generateUserMeterAssignment()
-        call.respond(mapOf("success" to true))
     }
 }

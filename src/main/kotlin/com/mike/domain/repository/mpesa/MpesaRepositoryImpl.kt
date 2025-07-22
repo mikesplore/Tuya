@@ -221,7 +221,8 @@ class MpesaRepositoryImpl(
 
             runBlocking {
                 println("Looking up meter payment for transaction ID: ${callback.checkoutRequestID}")
-                val meterPayment = callback.checkoutRequestID?.let { meterPaymentRepository.getPaymentsByMpesaTransactionId(it) }
+                val meterPayment =
+                    callback.checkoutRequestID?.let { meterPaymentRepository.getPaymentsByMpesaTransactionId(it) }
 
                 if (meterPayment != null) {
                     val newStatus = if (callback.resultCode == 0) "COMPLETED" else "FAILED"
@@ -287,6 +288,22 @@ class MpesaRepositoryImpl(
             val queryResponse = gson.fromJson(responseBody, Map::class.java)
             val resultCode = queryResponse["ResultCode"]?.toString()
             val resultDesc = queryResponse["ResultDesc"]?.toString()
+            val errorCode = queryResponse["errorCode"]?.toString()
+            val errorMessage = queryResponse["errorMessage"]?.toString()
+
+            // Handle special error: transaction does not exist
+            if (errorCode == "500.001.1001" && errorMessage == "The transaction does not Exist") {
+                println("Transaction does not exist in M-Pesa: $errorMessage")
+                val currentTransaction = getTransactionByCheckoutRequestId(checkoutRequestId)
+                if (currentTransaction != null) {
+                    transaction {
+                        MpesaTransactions.update({ MpesaTransactions.checkoutRequestId eq checkoutRequestId }) {
+                            it[status] = "N/A"
+                        }
+                    }
+                }
+                return false
+            }
 
             if (resultCode == "0") {
                 println("Transaction query successful: $resultDesc")
@@ -557,7 +574,7 @@ class MpesaRepositoryImpl(
                                 unitsAdded = BigDecimal.ZERO,
                                 balanceBefore = BigDecimal.ZERO,
                                 balanceAfter = BigDecimal.ZERO,
-                                paymentDate = java.time.LocalDateTime.now(),
+                                paymentDate = LocalDateTime.now(),
                                 status = "PENDING",
                                 description = description
                             )
@@ -581,7 +598,7 @@ class MpesaRepositoryImpl(
                     if (stkResponse.errorCode == "500.003.02" && retryCount < maxRetries) {
                         retryCount++
                         val backoffMs = (2000 * retryCount).toLong()
-                        println("System busy error, retrying in ${backoffMs/1000} seconds...")
+                        println("System busy error, retrying in ${backoffMs / 1000} seconds...")
                         kotlinx.coroutines.delay(backoffMs)
                         continue
                     }
@@ -606,8 +623,7 @@ class MpesaRepositoryImpl(
                         checkoutRequestId = null,
                         mpesaTransactionId = null
                     )
-                }
-                else {
+                } else {
                     throw Exception("M-Pesa API returned unexpected response format")
                 }
 
@@ -617,7 +633,7 @@ class MpesaRepositoryImpl(
 
                 if (retryCount < maxRetries) {
                     val backoffMs = (1000 * (retryCount + 1)).toLong()
-                    println("Retrying in ${backoffMs/1000} seconds...")
+                    println("Retrying in ${backoffMs / 1000} seconds...")
                     kotlinx.coroutines.delay(backoffMs)
                     retryCount++
                 } else {

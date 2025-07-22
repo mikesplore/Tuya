@@ -10,7 +10,8 @@ fun Application.configureSwagger() {
         // Serve the Swagger UI for the authentication API
         swaggerUI(path = "swagger/authentication", swaggerFile = "openapi/authentication.yaml")
         openAPI(path = "openapi/authentication", swaggerFile = "openapi/authentication.yaml")
-        openAPI(path = "swagger/meters", swaggerFile = "openapi/meters.yaml")
+        swaggerUI(path = "swagger/meters", swaggerFile = "openapi/meters.yaml")
+        openAPI(path = "openapi/meters", swaggerFile = "openapi/meters.yaml")
         openAPI(path = "swagger/meteruser", swaggerFile = "openapi/meteruser.yaml")
         swaggerUI(path = "swagger/meteruser", swaggerFile = "openapi/meteruser.yaml")
         swaggerUI(path = "swagger/tuya", swaggerFile = "openapi/tuya.yaml")

@@ -2,125 +2,12 @@ openapi: 3.0.0
 info:
   title: Meter User Assignment API
   version: 1.0.0
-paths:
-  /meter-user/assign:
-    post:
-      summary: Assign a meter to a user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MeterUserAssignment'
-      responses:
-        '200':
-          description: Assignment successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-
-  /meter-user/unassign:
-    post:
-      summary: Unassign a meter from a user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MeterUserAssignment'
-      responses:
-        '200':
-          description: Unassignment successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-
-  /meter-user/user/{userId}/meters:
-    get:
-      summary: Get meters assigned to a user
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: List of meters assigned to the user
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Meter'
-
-  /meter-user/meter/{meterId}/users:
-    get:
-      summary: Get users assigned to a meter
-      parameters:
-        - name: meterId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of users assigned to the meter
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Profile'
-
-  /meter-user/is-assigned:
-    get:
-      summary: Check if a meter is assigned to a user
-      parameters:
-        - name: meterId
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: userId
-          in: query
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Assignment status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  isAssigned:
-                    type: boolean
-
-  /meter-user/generate-assignments:
-    post:
-      summary: Generate user-meter assignments
-      responses:
-        '200':
-          description: Generation successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     MeterUserAssignment:
       type: object
@@ -129,8 +16,6 @@ components:
           type: string
         userId:
           type: integer
-        isAssigned:
-          type: boolean
     Meter:
       type: object
       properties:
@@ -163,4 +48,198 @@ components:
           type: string
         userRole:
           type: string
+paths:
+  /meter-user/assign:
+    post:
+      summary: Assign a meter to a user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeterUserAssignment'
+      responses:
+        '200':
+          description: Assignment successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '403':
+          description: Meter has already been assigned to another user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
 
+  /meter-user/unassign:
+    post:
+      summary: Unassign a meter from a user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeterUserAssignment'
+      responses:
+        '200':
+          description: Unassignment successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /meter-user/user/{userId}/meters:
+    get:
+      summary: Get meters assigned to a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of meters assigned to the user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Meter'
+
+  /meter-user/meter/{meterId}/users:
+    get:
+      summary: Get users assigned to a meter
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: meterId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of users assigned to the meter
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Profile'
+
+  /meter-user/is-assigned:
+    get:
+      summary: Check if a meter is assigned to a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: meterId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assignment status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isAssigned:
+                    type: boolean
+
+  /meter-user/meters/unassigned:
+    get:
+      summary: Get all meters not assigned to any user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of unassigned meters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Meter'
+
+  /meter-user/meter/{meterId}/user:
+    get:
+      summary: Get the user assigned to a specific meter
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: meterId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The user assigned to the meter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '404':
+          description: No user is assigned to this meter
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /meter-user/meter/{meterId}/users-without:
+    get:
+      summary: Get users not assigned to a specific meter
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: meterId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of users not assigned to the meter
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Profile'

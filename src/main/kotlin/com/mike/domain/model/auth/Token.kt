@@ -32,6 +32,6 @@ data class TokenPayload(
 
 data class LoginResponse(
     val profile: Any?,
-    val accessToken: String,
-    val refreshToken: String
+    val tokenPayload: TokenPayload,
+    val error: String? = null,
 )
