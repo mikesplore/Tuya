@@ -6,45 +6,23 @@ ktor:
   development: true
 
   deployment:
-    port: 8080
-    host: 0.0.0.0
+    port: ${PORT}
+    host: ${HOST}
     watch:
       - classes
       - resources
 
-# Tuya Cloud Configuration
-# These can be overridden by environment variables
-tuya:
-  # Required credentials - set via environment variables for security
-  access_id: ${ACCESS_ID:}
-  access_secret: ${ACCESS_SECRET:}
-  
-  # Optional configuration
-  endpoint: ${TUYA_ENDPOINT:https://openapi.tuyaeu.com}
-  project_code: ${PROJECT_CODE:}
-  device_id: ${DEVICE_ID:}
-
-# M-Pesa Configuration
-mpesa:
-  consumer_key: ${MPESA_CONSUMER_KEY:}
-  consumer_secret: ${MPESA_CONSUMER_SECRET:}
-  base_url: ${MPESA_BASE_URL:https://sandbox.safaricom.co.ke}
-  business_short_code: ${MPESA_BUSINESS_SHORT_CODE:174379}
-  passkey: ${MPESA_PASSKEY:}
-  callback_url: ${MPESA_CALLBACK_URL:https://7b9b-41-89-128-6.ngrok-free.app/payments/callback}
-
 # Security configuration for authentication
 security:
   jwt:
-    secret: ${JWT_SECRET:default_secret_key_please_change_in_production}
-    issuer: "tuya-app"
-    audience: "tuya-users"
-    realm: "Tuya Smart Meter App"
-    token_expiration: 3600000 # 1 hour in milliseconds
+    secret: ${JWT_SECRET}
+    issuer: ${JWT_ISSUER}
+    audience: ${JWT_AUDIENCE}
+    realm: ${JWT_REALM}
+    token_expiration: ${JWT_TOKEN_EXPIRATION}
 
-# Database configuration
 database:
-  driver: "org.postgresql.Driver"
-  url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/tuya}
-  user: ${DATABASE_USER:mike}
-  password: ${DATABASE_PASSWORD:mikemike}
+  driver: ${DATABASE_DRIVER}
+  url: ${DATABASE_URL}
+  user: ${DATABASE_USER}
+  password: ${DATABASE_PASSWORD}

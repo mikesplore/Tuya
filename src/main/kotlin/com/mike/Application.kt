@@ -23,6 +23,14 @@ import org.slf4j.event.Level
 import java.time.Duration
 
 fun main(args: Array<String>) {
+    // Load .env before starting Ktor
+    val env = dotenv {
+        ignoreIfMissing = true
+        directory = System.getProperty("user.dir")
+    }
+    env.entries().forEach { entry ->
+        System.setProperty(entry.key, entry.value)
+    }
     io.ktor.server.netty.EngineMain.main(args)
 }
 
@@ -40,12 +48,6 @@ fun Application.module() {
         slf4jLogger()
         properties(mapOf("applicationConfig" to environment.config))
         modules(appModule)
-    }
-
-    // Environment variables
-    dotenv {
-        ignoreIfMissing = true
-        directory = System.getProperty("user.dir")
     }
 
     // Services and repositories
@@ -79,4 +81,3 @@ fun Application.module() {
     // Start a background job for Mpesa pending transactions
     mpesaService.startMpesaPendingTransactionMonitor()
 }
-
