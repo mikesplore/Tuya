@@ -19,10 +19,18 @@ object DatabaseFactory {
     
     fun init(config: ApplicationConfig) {
         val driver = config.property("database.driver").getString()
-        val url = config.property("database.url").getString()
+        var url = config.property("database.url").getString()
         val user = config.property("database.user").getString()
         val password = config.property("database.password").getString()
         
+        // Ensure the URL is in the correct JDBC format
+        if (!url.startsWith("jdbc:")) {
+            // Convert from postgresql:// format to jdbc:postgresql:// format
+            if (url.startsWith("postgresql://")) {
+                url = "jdbc:" + url
+            }
+        }
+
         logger.info("Connecting to database at: $url")
         
         try {
