@@ -61,15 +61,6 @@ fun Application.module() {
     val mpesaService = get<MpesaService>()
     val appConfig = environment.config
 
-    userService.createUser(
-        RegisterRequest(
-            email = "mikepremium8@gmail.com",
-            password = "mikemike",
-            phoneNumber = "0799013845",
-            firstName = "Mike",
-            lastName = "Premium"
-        )
-    )
 
     // Authentication
     install(Authentication) {
