@@ -31,15 +31,33 @@ object DatabaseFactory {
             }
         }
 
+        // Extract username:password if present in the URL
+        var extractedUser = user
+        var extractedPassword = password
+
+        // Pattern to match username:password in JDBC URL
+        val credentialsPattern = "jdbc:postgresql://(.*?):(.*?)@(.*)".toRegex()
+        val match = credentialsPattern.find(url)
+
+        if (match != null && match.groupValues.size >= 4) {
+            extractedUser = match.groupValues[1]
+            extractedPassword = match.groupValues[2]
+            val hostPart = match.groupValues[3]
+            url = "jdbc:postgresql://$hostPart"
+            logger.info("Extracted credentials from URL. Using host: $hostPart")
+        }
+
         logger.info("Connecting to database at: $url")
-        
+        logger.info("Using driver: $driver")
+        logger.info("Using user: $extractedUser")
+
         try {
             // Connection using Exposed
             Database.connect(
                 url = url,
                 driver = driver,
-                user = user,
-                password = password
+                user = extractedUser,
+                password = extractedPassword
             )
             
             // Create tables if they don't exist
