@@ -4,6 +4,7 @@ import com.mike.apidocumentation.configureSwagger
 import com.mike.auth.JwtService
 import com.mike.database.DatabaseFactory
 import com.mike.di.appModule
+import com.mike.domain.model.user.RegisterRequest
 import com.mike.domain.repository.mpesa.MpesaRepository
 import com.mike.service.auth.AuthService
 import com.mike.service.meter.MeterService
@@ -59,6 +60,16 @@ fun Application.module() {
     val tuyaService = get<TuyaService>()
     val mpesaService = get<MpesaService>()
     val appConfig = environment.config
+
+    userService.createUser(
+        RegisterRequest(
+            email = "mikepremium8@gmail.com",
+            password = "mikemike",
+            phoneNumber = "0799013845",
+            firstName = "Mike",
+            lastName = "Premium"
+        )
+    )
 
     // Authentication
     install(Authentication) {
