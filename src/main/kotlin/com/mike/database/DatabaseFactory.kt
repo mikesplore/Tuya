@@ -57,7 +57,7 @@ object DatabaseFactory {
             }
             logger.info("Database connected and tables created successfully")
         } catch (e: Exception) {
-            logger.error("Failed to connect to database: ${e.message}", e)
+            logger.error("Failed to connect to database using the credentials: User: $user and password: $password: ${e.message}", e)
             throw e
         }
     }
