@@ -24,9 +24,14 @@ class MeterUserAssignmentRepositoryImpl(
                 .selectAll().where { MeterUserAssignments.meterId eq meterUserAssignment.meterId }
                 .firstOrNull()
 
-            // If already assigned, reject the operation
-            if (existingAssignment != null) {
+            // If already assigned to another user, reject the operation
+            if (existingAssignment != null && existingAssignment[MeterUserAssignments.userId] != meterUserAssignment.userId) {
                 return@transaction false
+            }
+
+            // If it's already assigned to the same user, just return true (no need to duplicate)
+            if (existingAssignment != null && existingAssignment[MeterUserAssignments.userId] == meterUserAssignment.userId) {
+                return@transaction true
             }
 
             // Create a new assignment

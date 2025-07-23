@@ -1,6 +1,7 @@
 package com.mike.domain.repository.mpesa
 
 import com.google.gson.Gson
+import com.mike.domain.model.meter.MeterPayment
 import com.mike.domain.model.mpesa.*
 import com.mike.domain.repository.meter.MeterPaymentRepository
 import io.github.cdimascio.dotenv.dotenv
@@ -9,6 +10,10 @@ import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
@@ -16,6 +21,7 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import java.math.BigDecimal
+import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -292,16 +298,48 @@ class MpesaRepositoryImpl(
             val errorMessage = queryResponse["errorMessage"]?.toString()
 
             // Handle special error: transaction does not exist
-            if (errorCode == "500.001.1001" && errorMessage == "The transaction does not Exist") {
+            if (errorCode == "500.001.1001" && errorMessage?.contains("transaction does not Exist") == true) {
                 println("Transaction does not exist in M-Pesa: $errorMessage")
-                val currentTransaction = getTransactionByCheckoutRequestId(checkoutRequestId)
-                if (currentTransaction != null) {
-                    transaction {
-                        MpesaTransactions.update({ MpesaTransactions.checkoutRequestId eq checkoutRequestId }) {
-                            it[status] = "N/A"
-                        }
+                transaction {
+                    MpesaTransactions.update({ MpesaTransactions.checkoutRequestId eq checkoutRequestId }) {
+                        it[status] = "N/A"
+                        it[responseDescription] = errorMessage
                     }
                 }
+
+                // Update related meter payment status if exists
+                localTransaction.checkoutRequestId?.let { checkoutReqId ->
+                    val meterPayment = meterPaymentRepository.getPaymentsByMpesaTransactionId(checkoutReqId)
+                    if (meterPayment != null) {
+                        meterPaymentRepository.updatePaymentStatus(
+                            meterPayment.copy(
+                                status = "N/A"
+                            )
+                        )
+                        println("Updated payment status to N/A - Transaction does not exist")
+                    }
+                }
+
+                return false
+            }
+
+            // Handle Spike arrest violation or other API errors
+            if (queryResponse.containsKey("fault")) {
+                val fault = queryResponse["fault"] as? Map<*, *>
+                val faultString = fault?.get("faultstring")?.toString()
+                println("API error occurred: $faultString")
+
+                // Don't update status for rate limiting errors, as we want to retry later
+                if (faultString?.contains("Spike arrest violation") == true) {
+                    return false
+                }
+
+                // For other API errors, update the transaction status
+                transaction {
+                    MpesaTransactions.update({ MpesaTransactions.checkoutRequestId eq checkoutRequestId }) {
+                    }
+                }
+
                 return false
             }
 
@@ -351,10 +389,8 @@ class MpesaRepositoryImpl(
                             checkoutRequestId = checkoutRequestId,
                             resultCode = resultCode,
                             resultDesc = resultDesc ?: "Transaction failed",
-                            receiptNumber = queryResponse["MpesaReceiptNumber"]?.toString() ?: "",
-                            transactionDate = queryResponse["TransactionDate"]?.toString()?.let {
-                                LocalDateTime.parse(it, DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-                            } ?: LocalDateTime.now()
+                            receiptNumber = "",
+                            transactionDate = LocalDateTime.now()
                         )
                     )
 
@@ -494,6 +530,34 @@ class MpesaRepositoryImpl(
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun startMpesaPendingTransactionMonitor() {
+        GlobalScope.launch {
+            while (true) {
+                try {
+                    val pendingTransactions = getTransactionsByStatus("PENDING")
+                    if (pendingTransactions.isNotEmpty()) {
+                        println("Found ${pendingTransactions.size} pending M-Pesa transactions. Querying status...")
+                        for (transaction in pendingTransactions) {
+                            transaction.checkoutRequestId?.let { checkoutId ->
+                                runCatching {
+                                    runBlocking { queryTransactionStatus(checkoutId) }
+                                }.onFailure {
+                                    println("Failed to query status for $checkoutId: ${it.message}")
+                                }
+                            }
+                        }
+                    } else {
+                        println("No pending M-Pesa transactions found.")
+                    }
+                } catch (e: Exception) {
+                    println("Error in M-Pesa transaction monitor: ${e.message}")
+                }
+                delay(Duration.ofMinutes(5).toMillis())
+            }
+        }
+    }
+
     override fun getTransactionById(id: Int): MpesaTransaction? = transaction {
         MpesaTransactions.selectAll().where { MpesaTransactions.id eq id }
             .singleOrNull()
@@ -566,7 +630,7 @@ class MpesaRepositoryImpl(
 
                     if (stkResponse.responseCode == "0") {
                         meterPaymentRepository.createPayment(
-                            com.mike.domain.model.meter.MeterPayment(
+                            MeterPayment(
                                 userId = userId,
                                 meterId = meterId,
                                 mpesaTransactionId = stkResponse.checkoutRequestID,
@@ -634,7 +698,7 @@ class MpesaRepositoryImpl(
                 if (retryCount < maxRetries) {
                     val backoffMs = (1000 * (retryCount + 1)).toLong()
                     println("Retrying in ${backoffMs / 1000} seconds...")
-                    kotlinx.coroutines.delay(backoffMs)
+                    delay(backoffMs)
                     retryCount++
                 } else {
                     println("All retry attempts failed")

@@ -56,7 +56,6 @@ fun Application.module() {
     val meterUserService = get<MeterUserService>()
     val tuyaService = get<TuyaService>()
     val mpesaService = get<MpesaService>()
-    val mpesaRepository = get<MpesaRepository>()
     val appConfig = environment.config
 
     // Authentication
@@ -77,34 +76,7 @@ fun Application.module() {
         jwtService
     )
 
-    // Start background job for Mpesa pending transactions
-    startMpesaPendingTransactionMonitor(mpesaRepository)
+    // Start a background job for Mpesa pending transactions
+    mpesaService.startMpesaPendingTransactionMonitor()
 }
 
-@OptIn(DelicateCoroutinesApi::class)
-fun startMpesaPendingTransactionMonitor(mpesaRepository: MpesaRepository) {
-    GlobalScope.launch {
-        while (true) {
-            try {
-                val pendingTransactions = mpesaRepository.getTransactionsByStatus("PENDING")
-                if (pendingTransactions.isNotEmpty()) {
-                    println("Found ${pendingTransactions.size} pending M-Pesa transactions. Querying status...")
-                    for (transaction in pendingTransactions) {
-                        transaction.checkoutRequestId?.let { checkoutId ->
-                            runCatching {
-                                runBlocking { mpesaRepository.queryTransactionStatus(checkoutId) }
-                            }.onFailure {
-                                println("Failed to query status for $checkoutId: ${it.message}")
-                            }
-                        }
-                    }
-                } else {
-                    println("No pending M-Pesa transactions found.")
-                }
-            } catch (e: Exception) {
-                println("Error in M-Pesa transaction monitor: ${e.message}")
-            }
-            delay(Duration.ofMinutes(5).toMillis())
-        }
-    }
-}

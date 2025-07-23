@@ -16,12 +16,18 @@ fun Route.meterUserRoutes(meterUserService: MeterUserService) {
             val assignment = call.receive<MeterUserAssignment>()
             val success = meterUserService.assignMeterToUser(assignment)
             if (success) {
-                call.respond(mapOf("success" to true))
+                call.respond(mapOf("success" to true, "message" to "Meter assigned successfully"))
             } else {
-                call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Meter has already been assigned to another user"))
+                call.respond(
+                    HttpStatusCode.Forbidden,
+                    mapOf("error" to "Meter has already been assigned to another user")
+                )
             }
         } catch (e: Exception) {
-            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Failed to assign meter to user: ${e.message}"))
+            call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf("error" to "Failed to assign meter to user: ${e.message}")
+            )
             e.printStackTrace()
         }
     }
@@ -31,12 +37,18 @@ fun Route.meterUserRoutes(meterUserService: MeterUserService) {
             val assignment = call.receive<MeterUserAssignment>()
             val success = meterUserService.unassignMeterFromUser(assignment)
             if (success) {
-                call.respond(mapOf("success" to true))
+                call.respond(mapOf("success" to true, "message" to "Meter unassigned successfully"))
             } else {
-                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Meter was not assigned to this user"))
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    mapOf("error" to "Meter was not assigned to this user")
+                )
             }
         } catch (e: Exception) {
-            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Failed to unassign meter from user: ${e.message}"))
+            call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf("error" to "Failed to unassign meter from user: ${e.message}")
+            )
             e.printStackTrace()
         }
     }
@@ -49,9 +61,12 @@ fun Route.meterUserRoutes(meterUserService: MeterUserService) {
                 return@get
             }
             val meters = meterUserService.getAssignedMetersByUser(userId)
-            call.respond(meters)
+            call.respond(mapOf("meters" to meters, "total" to meters.size))
         } catch (e: Exception) {
-            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get meters for user: ${e.message}"))
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                mapOf("error" to "Failed to get meters for user: ${e.message}")
+            )
             e.printStackTrace()
         }
     }
@@ -59,9 +74,12 @@ fun Route.meterUserRoutes(meterUserService: MeterUserService) {
     get("/meter-user/meters/unassigned") {
         try {
             val meters = meterUserService.getUnassignedMeters()
-            call.respond(meters)
+            call.respond(mapOf("meters" to meters, "total" to meters.size))
         } catch (e: Exception) {
-            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get unassigned meters: ${e.message}"))
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                mapOf("error" to "Failed to get unassigned meters: ${e.message}")
+            )
             e.printStackTrace()
         }
     }
@@ -70,9 +88,12 @@ fun Route.meterUserRoutes(meterUserService: MeterUserService) {
         try {
             val meterId = call.parameters["meterId"] ?: ""
             val users = meterUserService.getUsersByMeter(meterId)
-            call.respond(users)
+            call.respond(mapOf("users" to users, "total" to users.size))
         } catch (e: Exception) {
-            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get users for meter: ${e.message}"))
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                mapOf("error" to "Failed to get users for meter: ${e.message}")
+            )
             e.printStackTrace()
         }
     }
@@ -87,7 +108,10 @@ fun Route.meterUserRoutes(meterUserService: MeterUserService) {
                 call.respond(HttpStatusCode.NotFound, mapOf("message" to "No user is assigned to this meter"))
             }
         } catch (e: Exception) {
-            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get user for meter: ${e.message}"))
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                mapOf("error" to "Failed to get user for meter: ${e.message}")
+            )
             e.printStackTrace()
         }
     }
@@ -96,9 +120,12 @@ fun Route.meterUserRoutes(meterUserService: MeterUserService) {
         try {
             val meterId = call.parameters["meterId"] ?: ""
             val users = meterUserService.getUsersWithoutMeter(meterId)
-            call.respond(users)
+            call.respond(mapOf("users" to users, "total" to users.size))
         } catch (e: Exception) {
-            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get users without meter: ${e.message}"))
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                mapOf("error" to "Failed to get users without meter: ${e.message}")
+            )
             e.printStackTrace()
         }
     }
@@ -116,7 +143,10 @@ fun Route.meterUserRoutes(meterUserService: MeterUserService) {
             )
             call.respond(mapOf("isAssigned" to isAssigned))
         } catch (e: Exception) {
-            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to check assignment: ${e.message}"))
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                mapOf("error" to "Failed to check assignment: ${e.message}")
+            )
             e.printStackTrace()
         }
     }

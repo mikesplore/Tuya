@@ -48,6 +48,8 @@ interface MpesaRepository {
 
     fun updateTransactionFromCallback(request: MpesaTransactionCallbackUpdate)
 
+    fun startMpesaPendingTransactionMonitor()
+
     fun updateTransactionFromTimeout(request: MpesaTransactionTimeoutUpdate)
 
     fun updateTransactionFromQuery(request: MpesaTransactionQueryUpdate)

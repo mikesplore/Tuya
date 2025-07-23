@@ -48,10 +48,29 @@ components:
           type: string
         userRole:
           type: string
+    MetersResponse:
+      type: object
+      properties:
+        meters:
+          type: array
+          items:
+            $ref: '#/components/schemas/Meter'
+        total:
+          type: integer
+    UsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/Profile'
+        total:
+          type: integer
 paths:
   /meter-user/assign:
     post:
       summary: Assign a meter to a user
+      description: Assigns a meter to a user. If the meter is already assigned to another user, the operation will be rejected.
       security:
         - bearerAuth: []
       requestBody:
@@ -70,6 +89,8 @@ paths:
                 properties:
                   success:
                     type: boolean
+                  message:
+                    type: string
         '403':
           description: Meter has already been assigned to another user
           content:
@@ -92,6 +113,7 @@ paths:
   /meter-user/unassign:
     post:
       summary: Unassign a meter from a user
+      description: Removes the assignment of a meter from a user.
       security:
         - bearerAuth: []
       requestBody:
@@ -110,10 +132,22 @@ paths:
                 properties:
                   success:
                     type: boolean
+                  message:
+                    type: string
+        '404':
+          description: Meter was not assigned to this user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
 
   /meter-user/user/{userId}/meters:
     get:
       summary: Get meters assigned to a user
+      description: Retrieves all meters that are assigned to a specific user.
       security:
         - bearerAuth: []
       parameters:
@@ -128,13 +162,12 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Meter'
+                $ref: '#/components/schemas/MetersResponse'
 
   /meter-user/meter/{meterId}/users:
     get:
       summary: Get users assigned to a meter
+      description: Retrieves all users assigned to a specific meter. Since a meter can only be assigned to one user, this will return either a list with one user or an empty list.
       security:
         - bearerAuth: []
       parameters:
@@ -149,13 +182,12 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Profile'
+                $ref: '#/components/schemas/UsersResponse'
 
   /meter-user/is-assigned:
     get:
       summary: Check if a meter is assigned to a user
+      description: Checks if a specific meter is assigned to a specific user.
       security:
         - bearerAuth: []
       parameters:
@@ -183,6 +215,7 @@ paths:
   /meter-user/meters/unassigned:
     get:
       summary: Get all meters not assigned to any user
+      description: Retrieves all meters that are not currently assigned to any user.
       security:
         - bearerAuth: []
       responses:
@@ -191,13 +224,12 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Meter'
+                $ref: '#/components/schemas/MetersResponse'
 
   /meter-user/meter/{meterId}/user:
     get:
       summary: Get the user assigned to a specific meter
+      description: Retrieves the user that is assigned to a specific meter, if any.
       security:
         - bearerAuth: []
       parameters:
@@ -226,6 +258,7 @@ paths:
   /meter-user/meter/{meterId}/users-without:
     get:
       summary: Get users not assigned to a specific meter
+      description: Retrieves all users that are not assigned to a specific meter.
       security:
         - bearerAuth: []
       parameters:
@@ -240,6 +273,4 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Profile'
+                $ref: '#/components/schemas/UsersResponse'

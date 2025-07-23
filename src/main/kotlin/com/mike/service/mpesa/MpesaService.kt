@@ -49,4 +49,7 @@ class MpesaService(
     fun getAllTransactions(): List<MpesaTransaction> {
         return mpesaRepository.getAllTransactions()
     }
+
+    fun startMpesaPendingTransactionMonitor() =
+        mpesaRepository.startMpesaPendingTransactionMonitor()
 }
