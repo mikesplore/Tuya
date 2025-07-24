@@ -2,6 +2,7 @@ package com.mike.database
 
 import com.mike.domain.model.auth.RefreshTokens
 import com.mike.domain.model.meter.MeterPayments
+import com.mike.domain.model.meter.MeterRates
 import com.mike.domain.model.meter.MeterUserAssignments
 import com.mike.domain.model.meter.Meters
 import com.mike.domain.model.mpesa.MpesaTransactions
@@ -70,7 +71,8 @@ object DatabaseFactory {
                     MeterPayments,
                     ProfilePictures,
                     RefreshTokens,
-                    MeterUserAssignments
+                    MeterUserAssignments,
+                    MeterRates
                 )
             }
             logger.info("Database connected and tables created successfully")
