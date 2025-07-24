@@ -28,9 +28,9 @@ data class RegisterRequest(
     val password: String,
     val phoneNumber: String? = null,
     val firstName: String? = null,
-    val lastName: String? = null
+    val lastName: String? = null,
+    val userRole: UserRole = UserRole.USER
 )
-
 
 object ProfilePictures : Table() {
     val userId = reference("user_id", Users.userId)
