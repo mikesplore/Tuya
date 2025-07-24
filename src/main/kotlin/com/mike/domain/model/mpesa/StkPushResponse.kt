@@ -1,16 +1,18 @@
 package com.mike.domain.model.mpesa
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class StkPushResponse(
-    @SerializedName("MerchantRequestID") val merchantRequestID: String? = null,
-    @SerializedName("CheckoutRequestID") val checkoutRequestID: String? = null,
-    @SerializedName("ResponseCode") val responseCode: String? = null,
-    @SerializedName("ResponseDescription") val responseDescription: String? = null,
-    @SerializedName("CustomerMessage") val customerMessage: String? = null,
+    @SerialName("MerchantRequestID") val merchantRequestID: String? = null,
+    @SerialName("CheckoutRequestID") val checkoutRequestID: String? = null,
+    @SerialName("ResponseCode") val responseCode: String? = null,
+    @SerialName("ResponseDescription") val responseDescription: String? = null,
+    @SerialName("CustomerMessage") val customerMessage: String? = null,
 
     // Error response fields
-    @SerializedName("requestId") val requestId: String? = null,
-    @SerializedName("errorCode") val errorCode: String? = null,
-    @SerializedName("errorMessage") val errorMessage: String? = null
+    @SerialName("requestId") val requestId: String? = null,
+    @SerialName("errorCode") val errorCode: String? = null,
+    @SerialName("errorMessage") val errorMessage: String? = null
 )
