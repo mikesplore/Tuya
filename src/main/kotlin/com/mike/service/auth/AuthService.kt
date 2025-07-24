@@ -1,6 +1,7 @@
 package com.mike.service.auth
 
 import com.mike.auth.JwtService
+import com.mike.domain.model.auth.ChangePasswordRequest
 import com.mike.domain.model.auth.LoginCredentials
 import com.mike.domain.model.auth.TokenPayload
 import com.mike.domain.model.user.Profile
@@ -19,8 +20,8 @@ class AuthService(
         return authRepository.login(loginCredentials)
     }
 
-    fun changePassword(userId: String, newPassword: String): Pair<Boolean, String?> {
-        return authRepository.changePassword(userId, newPassword)
+    fun changePassword(changePasswordRequest: ChangePasswordRequest): Pair<Boolean, String?> {
+        return authRepository.changePassword(changePasswordRequest)
     }
 
     fun refreshToken(refreshToken: String): TokenPayload? {
