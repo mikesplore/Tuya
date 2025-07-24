@@ -2,6 +2,7 @@ package com.mike.domain.repository.auth
 
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.mike.auth.JwtService
+import com.mike.domain.model.auth.ChangePasswordRequest
 import com.mike.domain.model.auth.LoginCredentials
 import com.mike.domain.model.auth.RefreshToken
 import com.mike.domain.model.auth.RefreshTokens
@@ -14,25 +15,14 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.update
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
 import com.mike.domain.model.auth.TokenPayload
-import org.jetbrains.exposed.sql.Op
-import org.jetbrains.exposed.sql.SqlExpressionBuilder
-import org.jetbrains.exposed.sql.selectAll
 
 class AuthRepositoryImpl(
     private val jwtService: JwtService,
 ) : AuthRepository {
 
-    override fun changePassword(id: String, newPassword: String): Pair<Boolean, String?> = transaction {
-        val hashed = hashPassword(newPassword)
-        val rows = Users.update({ Users.userId eq id.toInt() }) {
-            it[passwordHash] = hashed
-        }
-        if (rows > 0) true to null else false to "User not found"
-    }
 
     override fun login(loginCredentials: LoginCredentials): Triple<Profile?, TokenPayload?, String?> = transaction {
         //check if the fields are not empty
@@ -80,6 +70,7 @@ class AuthRepositoryImpl(
                 userId = profileRow[Profiles.userId],
                 firstName = profileRow[Profiles.firstName],
                 lastName = profileRow[Profiles.lastName],
+                email = profileRow[Profiles.email],
                 phoneNumber = profileRow[Profiles.phoneNumber],
                 createdAt = profileRow[Profiles.createdAt],
                 updatedAt = profileRow[Profiles.updatedAt],
@@ -115,6 +106,22 @@ class AuthRepositoryImpl(
 
             Triple(profile, tokenPayload, null)
         }
+    }
+
+    override fun changePassword(changePasswordRequest: ChangePasswordRequest): Pair<Boolean, String?> = transaction {
+        val userRow = Users.selectAll().where { Users.userId eq changePasswordRequest.userId }.singleOrNull()
+        if (userRow == null) {
+            return@transaction false to "User not found"
+        }
+        val currentHash = userRow[Users.passwordHash]
+        if (!verifyPassword(changePasswordRequest.oldPassword, currentHash)) {
+            return@transaction false to "Old password is incorrect"
+        }
+        val hashed = hashPassword(changePasswordRequest.newPassword)
+        val rows = Users.update({ Users.userId eq changePasswordRequest.userId }) {
+            it[passwordHash] = hashed
+        }
+        if (rows > 0) true to null else false to "Password update failed"
     }
 
     override fun createRefreshToken(userId: Int): Unit = transaction {
