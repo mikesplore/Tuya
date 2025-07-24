@@ -4,7 +4,7 @@ data class AuthResponse(val token: String, val refreshToken: String, val userId:
 data class TokenRequest(val refreshToken: String)
 data class LoginCredentials(val email: String, val password: String)
 data class RefreshTokenRequest(val refreshToken: String)
-data class ChangePasswordRequest(val newPassword: String)
+data class ChangePasswordRequest(val userId: Int, val oldPassword: String, val newPassword: String)
 data class MessageResponse(val message: String)
 data class ErrorResponse(val error: String)
 data class VerifyTokenRequest(val token: String)
