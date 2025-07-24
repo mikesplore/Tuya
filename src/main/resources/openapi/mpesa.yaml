@@ -52,6 +52,67 @@ paths:
         '500':
           description: Internal server error
 
+  /mpesa/complete-payment:
+    post:
+      summary: Complete M-Pesa payment in a single request
+      description: >
+        Handles the entire payment flow in a single request - initiates the STK push,
+        waits for the payment to complete, calculates units based on amount, and adds units to the meter.
+        This endpoint uses long polling and may take up to 60 seconds to respond.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: float
+                  description: Amount to pay
+                phoneNumber:
+                  type: string
+                  description: Phone number to charge
+                meterId:
+                  type: string
+                  description: Meter ID
+                userId:
+                  type: integer
+                  description: User ID
+                accountReference:
+                  type: string
+                  description: Account reference (optional)
+                description:
+                  type: string
+                  description: Payment description (optional)
+                timeoutSeconds:
+                  type: integer
+                  description: Maximum time to wait for payment completion in seconds (default 60)
+              required:
+                - amount
+                - phoneNumber
+                - meterId
+                - userId
+      responses:
+        '200':
+          description: Complete payment response including payment details and meter update status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeterPaymentResponse'
+        '202':
+          description: Payment initiated but still processing (timeout reached)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeterPaymentResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+
   /mpesa/status/{checkoutRequestId}:
     get:
       summary: Get Mpesa payment status
@@ -71,6 +132,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MpesaTransaction'
+        '404':
+          description: Transaction not found
+        '500':
+          description: Internal server error
+
+  /mpesa/payment/process/{checkoutRequestId}:
+    get:
+      summary: Process a completed M-Pesa payment
+      description: >
+        Processes a completed M-Pesa payment by calculating units and adding them to the meter.
+        This endpoint should be used if the callback processing failed or for checking payment status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: checkoutRequestId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment processing result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeterPaymentResponse'
+        '400':
+          description: Bad request
         '404':
           description: Transaction not found
         '500':
@@ -136,6 +225,68 @@ components:
           type: string
           nullable: true
 
+    MeterPaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates whether the operation was successful
+        message:
+          type: string
+          description: Human-readable result message
+        paymentId:
+          type: integer
+          nullable: true
+          description: The ID of the payment record in the database
+        meterId:
+          type: string
+          nullable: true
+          description: The meter ID that received the payment
+        mpesaTransactionId:
+          type: string
+          nullable: true
+          description: The M-Pesa checkout request ID
+        mpesaReceiptNumber:
+          type: string
+          nullable: true
+          description: The M-Pesa receipt number for the transaction
+        amount:
+          type: number
+          format: float
+          nullable: true
+          description: The payment amount
+        unitsAdded:
+          type: number
+          format: float
+          nullable: true
+          description: The number of units/tokens added to the meter
+        balanceBefore:
+          type: number
+          format: float
+          nullable: true
+          description: The meter balance before adding units
+        balanceAfter:
+          type: number
+          format: float
+          nullable: true
+          description: The meter balance after adding units
+        paymentDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: The date and time of the payment
+        status:
+          type: string
+          nullable: true
+          description: The status of the payment (PENDING, COMPLETED, FAILED)
+        tuyaUpdateSuccess:
+          type: boolean
+          description: Indicates whether the units were successfully added to the meter
+        tuyaUpdateMessage:
+          type: string
+          nullable: true
+          description: Additional information about the meter update process
+
     MpesaTransaction:
       type: object
       properties:
@@ -200,4 +351,3 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-
