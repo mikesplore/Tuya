@@ -279,9 +279,17 @@ components:
     ChangePasswordRequest:
       type: object
       properties:
+        userId:
+          type: integer
+        oldPassword:
+          type: string
+          format: password
         newPassword:
           type: string
+          format: password
       required:
+        - userId
+        - oldPassword
         - newPassword
     MessageResponse:
       type: object
