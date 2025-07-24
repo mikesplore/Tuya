@@ -167,31 +167,27 @@ paths:
 
   /mpesa/callback:
     post:
-      summary: M-Pesa STK Push callback endpoint
-      description: Endpoint that receives callbacks from the M-Pesa API after an STK push transaction is completed.
+      summary: Mpesa payment callback
+      description: |
+        Endpoint for M-Pesa to POST payment results (STK push callbacks).
+        This endpoint is called by Safaricom M-Pesa after a user completes or cancels a payment on their phone.
+        The payload structure is defined by Safaricom and includes transaction status, receipt, and metadata.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/StkCallbackResponse'
+              $ref: '#/components/schemas/MpesaCallbackPayload'
       responses:
         '200':
-          description: Callback processed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ResultCode:
-                    type: integer
-                  ResultDesc:
-                    type: string
+          description: Callback processed successfully
+        '400':
+          description: Invalid callback payload
 
   /mpesa/transactions:
     get:
-      summary: Get all Mpesa transactions
-      description: Returns a list of all Mpesa transactions.
+      summary: List all Mpesa transactions
+      description: Returns all Mpesa payment transactions in the system.
       security:
         - bearerAuth: []
       responses:
@@ -292,11 +288,6 @@ components:
       properties:
         id:
           type: integer
-        phoneNumber:
-          type: string
-        amount:
-          type: number
-          format: float
         merchantRequestId:
           type: string
         checkoutRequestId:
@@ -307,8 +298,22 @@ components:
           type: string
         customerMessage:
           type: string
+        amount:
+          type: number
+          format: float
+        phoneNumber:
+          type: string
         status:
           type: string
+        callbackReceived:
+          type: boolean
+        mpesaReceiptNumber:
+          type: string
+          nullable: true
+        transactionDate:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -316,36 +321,38 @@ components:
           type: string
           format: date-time
 
-    StkCallbackResponse:
+    MpesaCallbackPayload:
       type: object
       properties:
-        body:
+        Body:
           type: object
           properties:
             stkCallback:
               type: object
               properties:
-                merchantRequestID:
+                MerchantRequestID:
                   type: string
-                checkoutRequestID:
+                CheckoutRequestID:
                   type: string
-                resultCode:
+                ResultCode:
                   type: integer
-                resultDesc:
+                ResultDesc:
                   type: string
-                callbackMetadata:
+                CallbackMetadata:
                   type: object
-                  nullable: true
                   properties:
-                    item:
+                    Item:
                       type: array
                       items:
                         type: object
                         properties:
-                          name:
+                          Name:
                             type: string
-                          value:
-                            type: object
+                          Value:
+                            oneOf:
+                              - type: string
+                              - type: number
+                              - type: integer
   securitySchemes:
     bearerAuth:
       type: http
