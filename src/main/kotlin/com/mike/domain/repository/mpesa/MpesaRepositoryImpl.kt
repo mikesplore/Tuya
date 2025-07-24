@@ -124,9 +124,38 @@ class MpesaRepositoryImpl(
         println("M-Pesa STK push response: $responseBody")
 
         return try {
-            gson.fromJson(responseBody, StkPushResponse::class.java)
+            // Direct parsing of JSON rather than relying on automatic deserialization
+            val jsonObject = gson.fromJson(responseBody, com.google.gson.JsonObject::class.java)
+
+            // Check whether this is a success or error response based on available fields
+            if (jsonObject.has("ResponseCode") || jsonObject.has("MerchantRequestID") || jsonObject.has("CheckoutRequestID")) {
+                // Success path
+                StkPushResponse(
+                    merchantRequestID = jsonObject.get("MerchantRequestID")?.asString,
+                    checkoutRequestID = jsonObject.get("CheckoutRequestID")?.asString,
+                    responseCode = jsonObject.get("ResponseCode")?.asString,
+                    responseDescription = jsonObject.get("ResponseDescription")?.asString,
+                    customerMessage = jsonObject.get("CustomerMessage")?.asString
+                )
+            } else if (jsonObject.has("errorCode") || jsonObject.has("errorMessage") || jsonObject.has("requestId")) {
+                // Error path
+                StkPushResponse(
+                    requestId = jsonObject.get("requestId")?.asString,
+                    errorCode = jsonObject.get("errorCode")?.asString,
+                    errorMessage = jsonObject.get("errorMessage")?.asString
+                )
+            } else {
+                // Unknown format
+                println("Unrecognized M-Pesa response format: $responseBody")
+                StkPushResponse(
+                    responseCode = "999",
+                    responseDescription = "Unrecognized response format",
+                    customerMessage = "An error occurred while processing your payment request"
+                )
+            }
         } catch (e: Exception) {
             println("Error parsing STK push response: ${e.message}")
+            e.printStackTrace()
             StkPushResponse(
                 merchantRequestID = null,
                 checkoutRequestID = null,
@@ -255,6 +284,78 @@ class MpesaRepositoryImpl(
         }
     }
 
+    /**
+     * Save raw callback data directly without using the StkCallbackResponse class
+     * Used as a fallback when normal deserialization fails
+     */
+    override fun saveRawCallback(
+        checkoutRequestId: String,
+        merchantRequestId: String?,
+        resultCode: Int,
+        resultDesc: String?,
+        mpesaReceiptNumber: String?,
+        amount: Double?,
+        phoneNumber: String?
+    ): Boolean {
+        println("=== RAW CALLBACK PROCESSING ===")
+        return try {
+            val cancellationCodes = setOf(1032, 1031, 1037)
+            val isUserCancellation = cancellationCodes.contains(resultCode)
+
+            // Convert amount from Double? to BigDecimal?
+            val amountBigDecimal = amount?.let { BigDecimal.valueOf(it) }
+
+            if (resultCode == 0) {
+                println("Payment has been made successfully! Receipt: $mpesaReceiptNumber")
+            } else if (isUserCancellation) {
+                println("Payment was CANCELLED by user. Result code: $resultCode")
+            } else {
+                println("Payment FAILED with code $resultCode: $resultDesc")
+            }
+
+            // Format transaction date (current time as we don't have the exact transaction time)
+            val transactionDate = LocalDateTime.now()
+
+            // Update the transaction in database
+            updateTransactionFromCallback(
+                MpesaTransactionCallbackUpdate(
+                    checkoutRequestId = checkoutRequestId,
+                    resultCode = resultCode.toString(),
+                    resultDesc = resultDesc ?: "",
+                    mpesaReceiptNumber = mpesaReceiptNumber,
+                    transactionDate = transactionDate
+                )
+            )
+
+            // Update related meter payment if found
+            runBlocking {
+                println("Looking up meter payment for transaction ID: $checkoutRequestId")
+                val meterPayment = meterPaymentRepository.getPaymentsByMpesaTransactionId(checkoutRequestId)
+
+                if (meterPayment != null) {
+                    val newStatus = if (resultCode == 0) "COMPLETED" else "FAILED"
+                    println("Found meter payment: ${meterPayment.id}, updating status to $newStatus")
+
+                    meterPaymentRepository.updatePaymentStatus(
+                        meterPayment.copy(
+                            status = newStatus,
+                        )
+                    )
+                    println("Payment status updated successfully to $newStatus")
+                } else {
+                    println("WARNING: No meter payment found for transaction ID: $checkoutRequestId")
+                }
+            }
+
+            println("=== RAW CALLBACK PROCESSING COMPLETED SUCCESSFULLY ===")
+            true
+        } catch (e: Exception) {
+            println("=== RAW CALLBACK PROCESSING FAILED ===")
+            e.printStackTrace()
+            false
+        }
+    }
+
     override suspend fun queryTransactionStatus(checkoutRequestId: String): Boolean {
         try {
             println("Querying transaction status from M-Pesa for checkout request ID: $checkoutRequestId")
@@ -265,6 +366,13 @@ class MpesaRepositoryImpl(
             if (localTransaction == null) {
                 println("No local transaction found with checkout request ID: $checkoutRequestId")
                 return false
+            }
+
+            // Don't query if the transaction is already in a final state
+            if (localTransaction.status == "SUCCESS" || localTransaction.status == "FAILED" ||
+                localTransaction.status == "N/A") {
+                println("Transaction is already in final state: ${localTransaction.status}, skipping query")
+                return localTransaction.status == "SUCCESS"
             }
 
             val timestamp = generateTimestamp()
@@ -329,15 +437,10 @@ class MpesaRepositoryImpl(
                 val faultString = fault?.get("faultstring")?.toString()
                 println("API error occurred: $faultString")
 
-                // Don't update status for rate limiting errors, as we want to retry later
+                // Don't update status for rate limiting errors, just return and try later
                 if (faultString?.contains("Spike arrest violation") == true) {
+                    println("Rate limit hit. Will retry later.")
                     return false
-                }
-
-                // For other API errors, update the transaction status
-                transaction {
-                    MpesaTransactions.update({ MpesaTransactions.checkoutRequestId eq checkoutRequestId }) {
-                    }
                 }
 
                 return false
@@ -379,6 +482,13 @@ class MpesaRepositoryImpl(
 
                 return true
             } else if (resultCode != null) {
+                // Handle the "still processing" status code 4999 differently - don't mark as failed
+                if (resultCode == "4999" || resultDesc?.contains("still", ignoreCase = true) == true) {
+                    println("Transaction is still being processed: $resultDesc")
+                    // Keep the transaction as PENDING - do not update status
+                    return false
+                }
+
                 println("Transaction query returned failure: $resultDesc")
 
                 val currentTransaction = getTransactionByCheckoutRequestId(checkoutRequestId)
@@ -538,10 +648,37 @@ class MpesaRepositoryImpl(
                     val pendingTransactions = getTransactionsByStatus("PENDING")
                     if (pendingTransactions.isNotEmpty()) {
                         println("Found ${pendingTransactions.size} pending M-Pesa transactions. Querying status...")
+
+                        // Process transactions one at a time with delay to avoid rate limiting
                         for (transaction in pendingTransactions) {
+                            if (transaction.callbackReceived) {
+                                println("Skipping transaction ${transaction.id}: callback already received")
+                                continue
+                            }
+
+                            // Only query transactions that are still pending and are older than 30 seconds
+                            // This gives time for callbacks to arrive naturally
+                            if (transaction.createdAt.plusSeconds(30).isAfter(LocalDateTime.now())) {
+                                println("Skipping transaction ${transaction.id}: too recent, waiting for callback")
+                                continue
+                            }
+
                             transaction.checkoutRequestId?.let { checkoutId ->
                                 runCatching {
-                                    runBlocking { queryTransactionStatus(checkoutId) }
+                                    // Check if this transaction should be queried
+                                    val localTransaction = getTransactionByCheckoutRequestId(checkoutId)
+                                    if (localTransaction != null &&
+                                        (localTransaction.status == "SUCCESS" ||
+                                         localTransaction.status == "FAILED" ||
+                                         localTransaction.status == "N/A")) {
+                                        println("Skipping query for transaction in final state: ${localTransaction.status}")
+                                    } else {
+                                        println("Querying status for transaction ID: $checkoutId")
+                                        runBlocking { queryTransactionStatus(checkoutId) }
+
+                                        // Add a small delay between API calls to avoid rate limiting
+                                        delay(1000)
+                                    }
                                 }.onFailure {
                                     println("Failed to query status for $checkoutId: ${it.message}")
                                 }
@@ -550,10 +687,16 @@ class MpesaRepositoryImpl(
                     } else {
                         println("No pending M-Pesa transactions found.")
                     }
+
+                    // Check for stalled transactions every 5 minutes
+                    handleStalledTransactions(10)
+
                 } catch (e: Exception) {
                     println("Error in M-Pesa transaction monitor: ${e.message}")
                 }
-                delay(Duration.ofMinutes(5).toMillis())
+
+                // Wait before checking again - 2 minutes
+                delay(Duration.ofMinutes(2).toMillis())
             }
         }
     }
@@ -601,8 +744,31 @@ class MpesaRepositoryImpl(
         description: String,
         maxRetries: Int
     ): PaymentResponse {
+        // Check if there's an existing pending transaction for this user and meter
+        // to avoid duplicate requests
+        val existingPendingPayments = meterPaymentRepository.getPaymentsByMeterId(meterId).filter {
+            it.status == "PENDING" && it.userId == userId &&
+            // Only consider transactions created in the last 10 minutes
+            it.createdAt.isAfter(LocalDateTime.now().minusMinutes(10))
+        }
+
+        if (existingPendingPayments.isNotEmpty()) {
+            val pendingPayment = existingPendingPayments.first()
+
+            // If we already have a pending transaction, return it instead of creating a new one
+            return PaymentResponse(
+                success = true,
+                message = "Payment already initiated and is being processed",
+                merchantRequestId = null,
+                checkoutRequestId = pendingPayment.mpesaTransactionId,
+                mpesaTransactionId = pendingPayment.mpesaTransactionId
+            )
+        }
+
         var retryCount = 0
         var lastException: Exception? = null
+        // Implement exponential backoff for retries
+        var backoffTimeMs = 1000L // Start with 1 second
 
         while (retryCount <= maxRetries) {
             try {
@@ -629,13 +795,14 @@ class MpesaRepositoryImpl(
                     )
 
                     if (stkResponse.responseCode == "0") {
+                        // Create the payment record with initial status as PENDING
                         meterPaymentRepository.createPayment(
                             MeterPayment(
                                 userId = userId,
                                 meterId = meterId,
                                 mpesaTransactionId = stkResponse.checkoutRequestID,
                                 amount = amount,
-                                unitsAdded = BigDecimal.ZERO,
+                                unitsAdded = BigDecimal.ZERO, // Will be calculated on success
                                 balanceBefore = BigDecimal.ZERO,
                                 balanceAfter = BigDecimal.ZERO,
                                 paymentDate = LocalDateTime.now(),
@@ -643,6 +810,9 @@ class MpesaRepositoryImpl(
                                 description = description
                             )
                         )
+
+                        // Log successful request initiation
+                        println("Payment initiated successfully: ${stkResponse.checkoutRequestID}, amount: $amount")
                     }
 
                     return PaymentResponse(
@@ -658,12 +828,14 @@ class MpesaRepositoryImpl(
                     // Handle error response from API
                     println("Received error response from M-Pesa API: ${stkResponse.errorCode} - ${stkResponse.errorMessage}")
 
-                    // If it's a system busy error, we can retry
-                    if (stkResponse.errorCode == "500.003.02" && retryCount < maxRetries) {
+                    // If it's a system busy error or rate limit error, we can retry with exponential backoff
+                    if ((stkResponse.errorCode == "500.003.02" ||
+                         stkResponse.errorMessage?.contains("Spike arrest") == true) &&
+                        retryCount < maxRetries) {
                         retryCount++
-                        val backoffMs = (2000 * retryCount).toLong()
-                        println("System busy error, retrying in ${backoffMs / 1000} seconds...")
-                        kotlinx.coroutines.delay(backoffMs)
+                        backoffTimeMs *= 2 // Exponential backoff
+                        println("System busy or rate limit error, retrying in ${backoffTimeMs / 1000} seconds... (Attempt $retryCount of $maxRetries)")
+                        kotlinx.coroutines.delay(backoffTimeMs)
                         continue
                     }
 
@@ -696,16 +868,19 @@ class MpesaRepositoryImpl(
                 println("Payment attempt ${retryCount + 1} failed: ${e.message}")
 
                 if (retryCount < maxRetries) {
-                    val backoffMs = (1000 * (retryCount + 1)).toLong()
-                    println("Retrying in ${backoffMs / 1000} seconds...")
-                    delay(backoffMs)
                     retryCount++
+                    backoffTimeMs *= 2 // Exponential backoff
+                    println("Retrying in ${backoffTimeMs / 1000} seconds... (Attempt $retryCount of $maxRetries)")
+                    delay(backoffTimeMs)
                 } else {
                     println("All retry attempts failed")
                     break
                 }
             }
         }
+
+        // Log failure after all retries
+        println("Payment initiation failed after $maxRetries retries: ${lastException?.message}")
 
         return PaymentResponse(
             success = false,
