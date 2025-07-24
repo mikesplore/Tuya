@@ -60,8 +60,6 @@ fun Application.module() {
     val tuyaService = get<TuyaService>()
     val mpesaService = get<MpesaService>()
     val appConfig = environment.config
-
-
     // Authentication
     install(Authentication) {
         jwtService.configureJwtAuthentication(appConfig, this)
