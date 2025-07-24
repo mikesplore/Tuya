@@ -38,22 +38,13 @@ class MpesaRepositoryImpl(
         val dotenv = dotenv {
             ignoreIfMissing = true
         }
-        // Automatic pick: use MPESA_CALLBACK_URL if set, else use MPESA_CALLBACK_URL_PROD if present and running in production
-        val env = System.getenv()["ENV"] ?: dotenv["ENV"] ?: "dev"
-        val callbackUrl =
-            dotenv["MPESA_CALLBACK_URL"]?.takeIf { it.isNotBlank() }
-                ?: if (env == "prod" || env == "production") {
-                    dotenv["MPESA_CALLBACK_URL_PROD"] ?: ""
-                } else {
-                    ""
-                }
         return MpesaConfig(
             baseUrl = dotenv["MPESA_BASE_URL"],
             consumerKey = dotenv["MPESA_CONSUMER_KEY"] ?: "",
             consumerSecret = dotenv["MPESA_CONSUMER_SECRET"] ?: "",
             shortCode = dotenv["MPESA_SHORT_CODE"] ?: "",
             passkey = dotenv["MPESA_PASSKEY"] ?: "",
-            callbackUrl = callbackUrl
+            callbackUrl = dotenv["MPESA_CALLBACK_URL"] ?: ""
         )
     }
 
