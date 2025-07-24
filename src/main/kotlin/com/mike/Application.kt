@@ -7,6 +7,7 @@ import com.mike.di.appModule
 import com.mike.domain.model.user.RegisterRequest
 import com.mike.domain.repository.mpesa.MpesaRepository
 import com.mike.service.auth.AuthService
+import com.mike.service.meter.MeterPaymentProcessingService
 import com.mike.service.meter.MeterService
 import com.mike.service.meter.MeterUserService
 import com.mike.service.mpesa.MpesaService
@@ -59,6 +60,7 @@ fun Application.module() {
     val meterUserService = get<MeterUserService>()
     val tuyaService = get<TuyaService>()
     val mpesaService = get<MpesaService>()
+    val meterPaymentProcessingService = get<MeterPaymentProcessingService>()
     val appConfig = environment.config
     // Authentication
     install(Authentication) {
@@ -75,7 +77,8 @@ fun Application.module() {
         meterUserService,
         tuyaService,
         mpesaService,
-        jwtService
+        jwtService,
+        meterPaymentProcessingService
     )
 
     // Start a background job for Mpesa pending transactions
