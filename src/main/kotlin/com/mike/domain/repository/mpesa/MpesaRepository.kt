@@ -65,4 +65,18 @@ interface MpesaRepository {
     fun getPendingTransactionsOlderThan(cutoffTime: LocalDateTime): List<MpesaTransaction>
 
     fun getAllTransactions(): List<MpesaTransaction>
+
+    /**
+     * Save raw callback data directly without using the StkCallbackResponse class
+     * Used as a fallback when normal deserialization fails
+     */
+    fun saveRawCallback(
+        checkoutRequestId: String,
+        merchantRequestId: String?,
+        resultCode: Int,
+        resultDesc: String?,
+        mpesaReceiptNumber: String?,
+        amount: Double?,
+        phoneNumber: String?
+    ): Boolean
 }
