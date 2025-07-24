@@ -52,4 +52,27 @@ class MpesaService(
 
     fun startMpesaPendingTransactionMonitor() =
         mpesaRepository.startMpesaPendingTransactionMonitor()
+
+    /**
+     * Save raw callback data directly without using the StkCallbackResponse class
+     */
+    fun saveRawCallback(
+        checkoutRequestId: String,
+        merchantRequestId: String?,
+        resultCode: Int,
+        resultDesc: String?,
+        mpesaReceiptNumber: String?,
+        amount: Double?,
+        phoneNumber: String?
+    ): Boolean {
+        return mpesaRepository.saveRawCallback(
+            checkoutRequestId = checkoutRequestId,
+            merchantRequestId = merchantRequestId,
+            resultCode = resultCode,
+            resultDesc = resultDesc,
+            mpesaReceiptNumber = mpesaReceiptNumber,
+            amount = amount,
+            phoneNumber = phoneNumber
+        )
+    }
 }
