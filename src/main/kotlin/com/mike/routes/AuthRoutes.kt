@@ -1,14 +1,6 @@
 package com.mike.routes
 
-import com.mike.domain.model.auth.ChangePasswordRequest
-import com.mike.domain.model.auth.ErrorResponse
-import com.mike.domain.model.auth.LoginCredentials
-import com.mike.domain.model.auth.LoginResponse
-import com.mike.domain.model.auth.MessageResponse
-import com.mike.domain.model.auth.RefreshTokenRequest
-import com.mike.domain.model.auth.TokenPayload
-import com.mike.domain.model.auth.VerifyTokenRequest
-import com.mike.domain.model.auth.VerifyTokenResponse
+import com.mike.domain.model.auth.*
 import com.mike.service.auth.AuthService
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -50,7 +42,7 @@ fun Route.authRoutes(authService: AuthService) {
                 } else {
                     call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse(error?: "Invalid login credentials")
+                        ErrorResponse(error ?: "Invalid login credentials")
                     )
                 }
             } catch (e: Exception) {
@@ -204,41 +196,31 @@ fun Route.authRoutes(authService: AuthService) {
         }
 
         // POST /auth/change-password
-        post("/change-password") {
-            authenticate("auth-jwt") {
-                scope.launch {
-                    try {
-                        val principal = call.principal<JWTPrincipal>()
-                        val userId = principal?.payload?.subject
-                        val request = call.receive<ChangePasswordRequest>()
+        authenticate("auth-jwt") {
+            post("/change-password") {
+                try {
+                    val passwordRequest = call.receive<ChangePasswordRequest>()
+                    val (success, error) = authService.changePassword(passwordRequest)
 
-                        if (userId != null) {
-                            val (success, error) = authService.changePassword(userId, request.newPassword)
-
-                            if (success) {
-                                call.respond(
-                                    HttpStatusCode.OK,
-                                    MessageResponse("Password changed successfully")
-                                )
-                            } else {
-                                call.respond(
-                                    HttpStatusCode.BadRequest,
-                                    ErrorResponse(error ?: "Failed to change password")
-                                )
-                            }
-                        } else {
-                            call.respond(
-                                HttpStatusCode.Unauthorized,
-                                ErrorResponse("Invalid user token")
-                            )
-                        }
-                    } catch (e: Exception) {
+                    if (success) {
+                        call.respond(
+                            HttpStatusCode.OK,
+                            MessageResponse("Password changed successfully")
+                        )
+                    } else {
                         call.respond(
                             HttpStatusCode.BadRequest,
-                            ErrorResponse("Invalid request format")
+                            ErrorResponse(error ?: "Failed to change password")
                         )
                     }
+
+                } catch (e: Exception) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid request format")
+                    )
                 }
+
             }
         }
     }
