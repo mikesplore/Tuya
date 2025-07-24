@@ -4,6 +4,7 @@ import com.mike.auth.JwtService
 import com.mike.routes.authRoutes
 import com.mike.routes.meterRoutes
 import com.mike.routes.meterUserRoutes
+import com.mike.routes.mpesaCallbackRoute
 import com.mike.routes.mpesaRoutes
 import com.mike.routes.tuyaRoutes
 import com.mike.service.auth.AuthService
@@ -25,6 +26,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import com.mike.service.meter.MeterPaymentProcessingService
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -42,7 +44,8 @@ fun Application.configureRouting(
     meterUserService: MeterUserService,
     tuyaService: TuyaService,
     mpesaService: MpesaService,
-    jwtService: JwtService
+    jwtService: JwtService,
+    meterPaymentProcessingService: MeterPaymentProcessingService
 ) {
     // Install CORS
     install(CORS) {
@@ -91,7 +94,12 @@ fun Application.configureRouting(
             meterRoutes(meterService)
             meterUserRoutes(meterUserService)
             tuyaRoutes(tuyaService)
-            mpesaRoutes(mpesaService)
+            mpesaRoutes(mpesaService, meterPaymentProcessingService)
         }
+    }
+
+    routing {
+        // Add the M-Pesa callback route outside of authentication
+        mpesaCallbackRoute(mpesaService, meterPaymentProcessingService)
     }
 }
