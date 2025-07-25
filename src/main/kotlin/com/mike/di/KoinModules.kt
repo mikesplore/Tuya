@@ -13,6 +13,8 @@ import com.mike.domain.repository.meter.MeterUserAssignmentRepository
 import com.mike.domain.repository.meter.MeterUserAssignmentRepositoryImpl
 import com.mike.domain.repository.mpesa.MpesaRepository
 import com.mike.domain.repository.mpesa.MpesaRepositoryImpl
+import com.mike.domain.repository.stats.StatsRepository
+import com.mike.domain.repository.stats.StatsRepositoryImpl
 import org.koin.dsl.module
 import com.mike.domain.repository.user.UserRepository
 import com.mike.domain.repository.user.UserRepositoryImpl
@@ -21,6 +23,8 @@ import com.mike.service.meter.MeterPaymentProcessingService
 import com.mike.service.meter.MeterService
 import com.mike.service.meter.MeterUserService
 import com.mike.service.mpesa.MpesaService
+import com.mike.service.stats.StatsService
+import com.mike.service.stats.StatsServiceImpl
 import com.mike.service.user.UserService
 import com.mike.tuya.TuyaAuth
 import com.mike.tuya.TuyaConfig
@@ -54,6 +58,7 @@ val appModule = module {
     single<UserRepository> { UserRepositoryImpl(get()) }
     single<MeterUserAssignmentRepository> { MeterUserAssignmentRepositoryImpl(get(), get()) }
     single<MeterRateRepository> { MeterRateRepositoryImpl() }
+    single<StatsRepository> { StatsRepositoryImpl() }
 
 
     single { AuthService(get(), get()) }
@@ -70,6 +75,6 @@ val appModule = module {
     single { TuyaService(get()) }
     single { MeterUserService(get()) }
     single { MeterPaymentProcessingService(get(), get(), get()) }
+    single<StatsService> { StatsServiceImpl(get()) }
 
     }
-
