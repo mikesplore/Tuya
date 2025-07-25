@@ -53,6 +53,9 @@ class MpesaService(
     fun startMpesaPendingTransactionMonitor() =
         mpesaRepository.startMpesaPendingTransactionMonitor()
 
+    fun getUserTransactions(userId: Int): List<MpesaTransaction> =
+        mpesaRepository.getUserTransactions(userId)
+
     /**
      * Save raw callback data directly without using the StkCallbackResponse class
      */
