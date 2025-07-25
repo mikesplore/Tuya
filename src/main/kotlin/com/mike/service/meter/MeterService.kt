@@ -12,6 +12,7 @@ class MeterService(
 
     fun findById(id: String): Meter? = meterRepository.findById(id)
     fun getAllMeters(): List<Meter> = meterRepository.getAllMeters()
+    fun getMetersForUser(userId: Int): List<Meter> = meterRepository.getMetersForUser(userId)
     fun createMeter(meter: MeterCreationRequest): String? = meterRepository.createMeter(meter)
     fun updateMeter(meter: MeterCreationRequest) = meterRepository.updateMeter(meter)
     fun deleteMeter(id: String): Boolean = meterRepository.deleteMeter(id)
