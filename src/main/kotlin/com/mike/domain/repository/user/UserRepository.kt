@@ -2,6 +2,7 @@ package com.mike.domain.repository.user
 
 import com.mike.domain.model.user.Profile
 import com.mike.domain.model.user.ProfilePicture
+import com.mike.domain.model.user.ProfileUpdateRequest
 import com.mike.domain.model.user.RegisterRequest
 import com.mike.domain.model.user.User
 
@@ -61,7 +62,7 @@ interface UserRepository {
      * and the second value is a nullable message providing additional details, such as error information
      * if the update was unsuccessful.
      */
-    fun updateUser(updatedUser: Profile): Pair<Boolean, String?>
+    fun updateUser(updatedUser: ProfileUpdateRequest): Pair<Boolean, String?>
     /**
      * Deletes a user from the system based on their unique identifier.
      *
@@ -89,5 +90,7 @@ interface UserRepository {
      * @return The profile picture of the user as a ProfilePicture object, or null if no profile picture exists.
      */
     fun getProfilePicture(userId: Int): ProfilePicture?
+
+    fun deleteProfilePicture(userId: Int): Pair<Boolean, String?>
 
 }
