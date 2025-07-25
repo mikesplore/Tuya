@@ -1,0 +1,259 @@
+openapi: 3.0.0
+info:
+  title: Statistics API
+  version: 1.0.0
+  description: Endpoints for dashboard and analytics statistics for Tuya Smart Meter system.
+
+paths:
+  /stats/admin/dashboard:
+    get:
+      summary: Get system-wide statistics for admin dashboard
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Admin statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminStatistics'
+        '403':
+          description: Forbidden
+        '401':
+          description: Unauthorized
+
+  /stats/user/dashboard:
+    get:
+      summary: Get user-specific statistics for dashboard
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStatistics'
+        '401':
+          description: Unauthorized
+
+  /stats/transactions/daily:
+    get:
+      summary: Get daily transaction statistics for charting
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Daily transaction statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DailyTransactionStats'
+        '401':
+          description: Unauthorized
+
+  /stats/payments:
+    get:
+      summary: Get meter payment statistics
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Meter payment statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeterPaymentStats'
+        '401':
+          description: Unauthorized
+
+  /stats/meters/count:
+    get:
+      summary: Get total meter count
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Total meter count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalMeters:
+                    type: integer
+        '401':
+          description: Unauthorized
+
+  /stats/meters/status:
+    get:
+      summary: Get active/inactive meter counts
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Active/inactive meter counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  activeMeters:
+                    type: integer
+                  inactiveMeters:
+                    type: integer
+        '401':
+          description: Unauthorized
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AdminStatistics:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalMeters:
+          type: integer
+        totalTransactions:
+          type: integer
+        totalSuccessfulTransactions:
+          type: integer
+        totalFailedTransactions:
+          type: integer
+        totalRevenue:
+          type: number
+          format: double
+        revenueLastSevenDays:
+          type: number
+          format: double
+        revenueLastThirtyDays:
+          type: number
+          format: double
+        transactionsLastSevenDays:
+          type: integer
+        transactionsLastThirtyDays:
+          type: integer
+        activeMeters:
+          type: integer
+        inactiveMeters:
+          type: integer
+        averageTransactionValue:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+    UserStatistics:
+      type: object
+      properties:
+        userId:
+          type: integer
+        totalMeters:
+          type: integer
+        totalTransactions:
+          type: integer
+        totalSuccessfulTransactions:
+          type: integer
+        totalFailedTransactions:
+          type: integer
+        totalSpent:
+          type: number
+          format: double
+        spentLastSevenDays:
+          type: number
+          format: double
+        spentLastThirtyDays:
+          type: number
+          format: double
+        transactionsLastSevenDays:
+          type: integer
+        transactionsLastThirtyDays:
+          type: integer
+        activeMeters:
+          type: integer
+        inactiveMeters:
+          type: integer
+        averageTransactionValue:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+    DailyTransactionStats:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        count:
+          type: integer
+        value:
+          type: number
+          format: double
+    MeterPaymentStats:
+      type: object
+      properties:
+        totalPayments:
+          type: integer
+        successfulPayments:
+          type: integer
+        failedPayments:
+          type: integer
+        pendingPayments:
+          type: integer
+        totalAmount:
+          type: number
+          format: double
+        averageAmount:
+          type: number
+          format: double
+

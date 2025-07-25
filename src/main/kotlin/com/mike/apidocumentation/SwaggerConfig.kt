@@ -16,6 +16,8 @@ fun Application.configureSwagger() {
         swaggerUI(path = "swagger/meteruser", swaggerFile = "openapi/meteruser.yaml")
         swaggerUI(path = "swagger/tuya", swaggerFile = "openapi/tuya.yaml")
         openAPI(path = "openapi/tuya", swaggerFile = "openapi/tuya.yaml")
+        swaggerUI(path = "swagger/stats", swaggerFile = "openapi/stats.yaml")
+        openAPI(path = "openapi/stats", swaggerFile = "openapi/stats.yaml")
 
         swaggerUI(path = "swagger/mpesa", swaggerFile = "openapi/mpesa.yaml")
         openAPI(path = "openapi/mpesa", swaggerFile = "openapi/mpesa.yaml")
