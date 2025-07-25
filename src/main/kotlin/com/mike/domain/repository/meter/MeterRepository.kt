@@ -5,6 +5,7 @@ import com.mike.domain.model.meter.MeterCreationRequest
 
 interface MeterRepository {
     fun findById(id: String): Meter?
+    fun getMetersForUser(userId: Int): List<Meter>
     fun getAllMeters(): List<Meter>
     fun createMeter(meter: MeterCreationRequest): String? = null
     fun updateMeter(meter: MeterCreationRequest)
