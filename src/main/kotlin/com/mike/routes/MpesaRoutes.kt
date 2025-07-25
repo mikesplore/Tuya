@@ -1,12 +1,15 @@
 package com.mike.routes
 
+import com.mike.auth.JwtService
 import com.mike.domain.model.meter.MeterPaymentResponse
 import com.mike.domain.model.mpesa.MpesaTransaction
 import com.mike.domain.model.mpesa.PaymentResponse
 import com.mike.domain.model.mpesa.StkCallback
 import com.mike.domain.model.mpesa.StkCallbackBody
+import com.mike.routes.rbac.extractUserFromToken
 import com.mike.service.meter.MeterPaymentProcessingService
 import com.mike.service.mpesa.MpesaService
+import com.mike.service.user.UserService
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -85,7 +88,7 @@ fun Route.mpesaCallbackRoute(mpesaService: MpesaService, meterPaymentProcessingS
 }
 
 // New function to process raw callback data without serialization
-private suspend fun processRawCallback(
+private fun processRawCallback(
     checkoutRequestId: String,
     merchantRequestId: String?,
     resultCode: Int,
@@ -151,7 +154,9 @@ private suspend fun processRawCallback(
 @OptIn(DelicateCoroutinesApi::class)
 fun Route.mpesaRoutes(
     mpesaService: MpesaService,
-    meterPaymentProcessingService: MeterPaymentProcessingService
+    meterPaymentProcessingService: MeterPaymentProcessingService,
+    jwtService: JwtService,
+    userService: UserService
 ) {
 
     route("/mpesa") {
@@ -223,7 +228,12 @@ fun Route.mpesaRoutes(
 
         get("/transactions") {
             try {
-                val transactions = mpesaService.getAllTransactions()
+                val user = extractUserFromToken(call, jwtService, userService)?: return@get call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
+                val transactions = if (user.userRole == "ADMIN") {
+                    mpesaService.getAllTransactions()
+                } else {
+                    mpesaService.getUserTransactions(user.userId)
+                }
                 call.respond(transactions)
             } catch (e: Exception) {
                 application.log.error("Error fetching transactions: ${e.message}", e)
