@@ -139,7 +139,7 @@ class MeterPaymentRepositoryImpl(
             .singleOrNull()?.let { mapToMeterPayment(it) }
     }
 
-    override suspend fun getPaymentsByUserId(userId: Int): List<MeterPayment> = transaction {
+    override fun getPaymentsByUserId(userId: Int): List<MeterPayment> = transaction {
         MeterPayments.selectAll().where { MeterPayments.userId eq userId }
             .map { mapToMeterPayment(it) }
     }
