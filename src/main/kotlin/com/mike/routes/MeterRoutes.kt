@@ -1,18 +1,26 @@
 package com.mike.routes
 
+import com.mike.auth.JwtService
 import com.mike.domain.model.meter.MeterCreationRequest
+import com.mike.routes.rbac.extractUserFromToken
 import com.mike.service.meter.MeterService
+import com.mike.service.user.UserService
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Route.meterRoutes(meterService: MeterService) {
+fun Route.meterRoutes(meterService: MeterService, jwtService: JwtService, userService: UserService) {
     /**
      * GET /meters - Retrieve all meters
      */
     get("/meters") {
-        val meters = meterService.getAllMeters()
+        val user = extractUserFromToken(call, jwtService, userService) ?: return@get call.respond("Unauthorized")
+        val meters = if (user.userRole == "ADMIN") {
+            meterService.getAllMeters()
+        } else {
+            meterService.getMetersForUser(user.userId)
+        }
         call.respond(meters)
     }
 
@@ -46,7 +54,7 @@ fun Route.meterRoutes(meterService: MeterService) {
      * PUT /meters/{id} - Update a meter
      */
     put("/meters/{id}") {
-        val id = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+        call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
         val meter = call.receive<MeterCreationRequest>()
         meterService.updateMeter(meter)
         call.respond(HttpStatusCode.OK, mapOf("message" to "Meter updated"))
