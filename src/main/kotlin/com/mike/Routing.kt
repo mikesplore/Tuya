@@ -6,12 +6,14 @@ import com.mike.routes.meterRoutes
 import com.mike.routes.meterUserRoutes
 import com.mike.routes.mpesaCallbackRoute
 import com.mike.routes.mpesaRoutes
+import com.mike.routes.statsRoutes
 import com.mike.routes.tuyaRoutes
 import com.mike.service.auth.AuthService
 import com.mike.routes.userRoutes
 import com.mike.service.meter.MeterService
 import com.mike.service.meter.MeterUserService
 import com.mike.service.mpesa.MpesaService
+import com.mike.service.stats.StatsService
 import com.mike.service.user.UserService
 import com.mike.service.tuya.TuyaService
 import io.ktor.client.*
@@ -45,7 +47,8 @@ fun Application.configureRouting(
     tuyaService: TuyaService,
     mpesaService: MpesaService,
     jwtService: JwtService,
-    meterPaymentProcessingService: MeterPaymentProcessingService
+    meterPaymentProcessingService: MeterPaymentProcessingService,
+    statsService: StatsService
 ) {
     // Install CORS
     install(CORS) {
@@ -95,6 +98,7 @@ fun Application.configureRouting(
             meterUserRoutes(meterUserService)
             tuyaRoutes(tuyaService)
             mpesaRoutes(mpesaService, meterPaymentProcessingService, jwtService, userService)
+            statsRoutes(jwtService, statsService, userService)
         }
     }
 
