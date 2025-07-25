@@ -1,7 +1,9 @@
 package com.mike.routes.rbac
 
 import com.mike.auth.JwtService
+import com.mike.domain.model.user.Profile
 import com.mike.domain.model.user.UserRole
+import com.mike.service.user.UserService
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -53,6 +55,30 @@ suspend fun extractUserEmailFromToken(call: ApplicationCall, jwtService: JwtServ
         }
     } catch (e: Exception) {
         println("Error in extractUserEmailFromToken: ${e.message}")
+        call.respondText("Invalid token", status = HttpStatusCode.Unauthorized)
+        null
+    }
+}
+
+suspend fun extractUserFromToken(call: ApplicationCall, jwtService: JwtService, userService: UserService): Profile? {
+    val authorizationHeader = call.request.headers[HttpHeaders.Authorization]
+    if (authorizationHeader.isNullOrBlank() || !authorizationHeader.startsWith("Bearer ")) {
+        println("No Authorization header found or invalid format")
+        return null
+    }
+
+    val accessToken = authorizationHeader.removePrefix("Bearer ").trim()
+    return try {
+        val jwt = jwtService.jwtVerifier.verify(accessToken)
+        val email = jwt.getClaim("email").asString()
+        if (email.isNullOrEmpty()) {
+            call.respondText("Invalid token for $email", status = HttpStatusCode.Unauthorized)
+            null
+        } else {
+            userService.getUserByEmail(email)
+        }
+    } catch (e: Exception) {
+        println("Error in extractUserFromToken: ${e.message}")
         call.respondText("Invalid token", status = HttpStatusCode.Unauthorized)
         null
     }
