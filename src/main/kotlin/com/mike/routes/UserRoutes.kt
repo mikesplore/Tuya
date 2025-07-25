@@ -1,7 +1,9 @@
 package com.mike.routes
 
 import com.mike.auth.JwtService
+import com.mike.domain.model.auth.MessageResponse
 import com.mike.domain.model.user.Profile
+import com.mike.domain.model.user.ProfileUpdateRequest
 import com.mike.domain.model.user.RegisterRequest
 import com.mike.domain.model.user.UserRole
 import com.mike.routes.rbac.extractUserEmailFromToken
@@ -54,7 +56,6 @@ fun Route.userRoutes(userService: UserService, jwtService: JwtService) {
         }
 
         post {
-
             withRole(call, jwtService, UserRole.ADMIN) {
                 try {
                     val registerRequest = call.receive<RegisterRequest>()
@@ -80,18 +81,19 @@ fun Route.userRoutes(userService: UserService, jwtService: JwtService) {
         // Update user
         put("/{id}") {
             withRole(call, jwtService, UserRole.ADMIN) {
-                val id = call.parameters["id"]?.toIntOrNull() ?: return@withRole call.respond(HttpStatusCode.BadRequest)
+                call.parameters["id"]?.toIntOrNull() ?: return@withRole call.respond(HttpStatusCode.BadRequest)
                 try {
-                    val profile = call.receive<Profile>()
+                    val profile = call.receive<ProfileUpdateRequest>()
+                    println("Received profile for update: $profile")
 
                     val (success, error) = userService.updateUser(profile)
                     if (success) {
-                        val updatedUser = userService.getUserById(id)
-                        call.respond(updatedUser!!)
+                        call.respond(HttpStatusCode.OK, MessageResponse( "User updated successfully"))
                     } else {
                         call.respond(HttpStatusCode.BadRequest, mapOf("message" to error))
                     }
                 } catch (e: Exception) {
+                    println("Error updating user: ${e.message}")
                     call.respond(
                         HttpStatusCode.InternalServerError,
                         mapOf("message" to "Failed to update user: ${e.message}")
@@ -173,6 +175,24 @@ fun Route.userRoutes(userService: UserService, jwtService: JwtService) {
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Profile picture uploaded successfully"))
             } else {
                 call.respond(HttpStatusCode.InternalServerError, mapOf("message" to error))
+            }
+        }
+
+        // Delete user profile image
+        delete("/{id}/profile-picture") {
+            try {
+                val id = call.parameters["id"]?.toIntOrNull() ?: return@delete call.respond(HttpStatusCode.BadRequest)
+                val (success, error) = userService.deleteProfilePicture(id)
+                if (success) {
+                    call.respond(HttpStatusCode.OK, mapOf("message" to "Profile picture deleted successfully"))
+                } else {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("message" to error))
+                }
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("message" to "Failed to delete profile picture: ${e.message}")
+                )
             }
         }
     }
