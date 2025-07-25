@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -733,6 +734,16 @@ class MpesaRepositoryImpl(
 
     override fun getAllTransactions(): List<MpesaTransaction> = transaction {
         MpesaTransactions.selectAll().map { toMpesaTransaction(it) }
+    }
+
+    override fun getUserTransactions(userId: Int): List<MpesaTransaction> {
+        return transaction {
+            val meterPayments = meterPaymentRepository.getPaymentsByUserId(userId)
+            val mpesaTransactionIds = meterPayments.mapNotNull { it.mpesaTransactionId }
+            if (mpesaTransactionIds.isEmpty()) return@transaction emptyList()
+            MpesaTransactions.selectAll().where { MpesaTransactions.checkoutRequestId inList mpesaTransactionIds }
+                .map { toMpesaTransaction(it) }
+        }
     }
 
     override suspend fun initiatePayment(
