@@ -11,6 +11,7 @@ import com.mike.service.meter.MeterPaymentProcessingService
 import com.mike.service.meter.MeterService
 import com.mike.service.meter.MeterUserService
 import com.mike.service.mpesa.MpesaService
+import com.mike.service.stats.StatsService
 import com.mike.service.tuya.TuyaService
 import com.mike.service.user.UserService
 import io.github.cdimascio.dotenv.dotenv
@@ -61,6 +62,7 @@ fun Application.module() {
     val tuyaService = get<TuyaService>()
     val mpesaService = get<MpesaService>()
     val meterPaymentProcessingService = get<MeterPaymentProcessingService>()
+    val statsService = get<StatsService>()
     val appConfig = environment.config
     // Authentication
     install(Authentication) {
@@ -78,7 +80,8 @@ fun Application.module() {
         tuyaService,
         mpesaService,
         jwtService,
-        meterPaymentProcessingService
+        meterPaymentProcessingService,
+        statsService
     )
 
     // Start a background job for Mpesa pending transactions
