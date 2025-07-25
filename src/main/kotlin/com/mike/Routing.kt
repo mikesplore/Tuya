@@ -91,10 +91,10 @@ fun Application.configureRouting(
     routing {
         authenticate("auth-jwt") {
             userRoutes(userService, jwtService)
-            meterRoutes(meterService)
+            meterRoutes(meterService, jwtService, userService)
             meterUserRoutes(meterUserService)
             tuyaRoutes(tuyaService)
-            mpesaRoutes(mpesaService, meterPaymentProcessingService)
+            mpesaRoutes(mpesaService, meterPaymentProcessingService, jwtService, userService)
         }
     }
 
