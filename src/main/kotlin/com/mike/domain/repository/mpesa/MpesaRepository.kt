@@ -66,6 +66,8 @@ interface MpesaRepository {
 
     fun getAllTransactions(): List<MpesaTransaction>
 
+    fun getUserTransactions(userId: Int): List<MpesaTransaction>
+
     /**
      * Save raw callback data directly without using the StkCallbackResponse class
      * Used as a fallback when normal deserialization fails
