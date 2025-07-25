@@ -130,7 +130,7 @@ class UserRepositoryImpl(
         }
     }
 
-    override fun updateUser(updatedUser: Profile): Pair<Boolean, String?> = transaction {
+    override fun updateUser(updatedUser: ProfileUpdateRequest): Pair<Boolean, String?> = transaction {
         try {
             Users.selectAll().where { Users.userId eq updatedUser.userId }
                 .singleOrNull() ?: return@transaction Pair(false, "User not found")
@@ -165,6 +165,7 @@ class UserRepositoryImpl(
             }
             Profiles.update({ Profiles.userId eq updatedUser.userId }) {
                 it[firstName] = updatedUser.firstName
+                it[email] = updatedUser.email ?: updatedUser.email// Keep existing email if not provided
                 it[lastName] = updatedUser.lastName
                 it[phoneNumber] = cleanedPhone
                 it[updatedAt] = LocalDateTime.now()
@@ -234,6 +235,21 @@ class UserRepositoryImpl(
         } catch (e: Exception) {
             println("Error retrieving profile picture: ${e.message}")
             null
+        }
+    }
+
+    override fun deleteProfilePicture(userId: Int): Pair<Boolean, String?> {
+        return transaction {
+            try {
+                val existingPicture = ProfilePictures.selectAll().where { ProfilePictures.userId eq userId }.singleOrNull()
+                if (existingPicture == null) {
+                    return@transaction Pair(false, "Profile picture not found for user ID $userId")
+                }
+                ProfilePictures.deleteWhere { ProfilePictures.userId eq userId }
+                Pair(true, null)
+            } catch (e: Exception) {
+                Pair(false, "Failed to delete profile picture: ${e.message}")
+            }
         }
     }
 
