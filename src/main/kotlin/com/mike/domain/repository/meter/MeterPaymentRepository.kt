@@ -6,7 +6,7 @@ interface MeterPaymentRepository {
     suspend fun createPayment(meterPayment: MeterPayment)
     suspend fun updatePaymentStatus(meterPayment: MeterPayment)
     suspend fun getPaymentById(id: Int): MeterPayment?
-    suspend fun getPaymentsByUserId(userId: Int): List<MeterPayment>
+    fun getPaymentsByUserId(userId: Int): List<MeterPayment>
     suspend fun getPaymentsByMeterId(meterId: String): List<MeterPayment>
     suspend fun getPaymentsByStatus(status: String): List<MeterPayment>
     suspend fun getPaymentsByMpesaTransactionId(mpesaTransactionId: String): MeterPayment?
