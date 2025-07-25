@@ -2,6 +2,7 @@ package com.mike.domain.repository.meter
 
 import com.mike.domain.model.meter.Meter
 import com.mike.domain.model.meter.MeterCreationRequest
+import com.mike.domain.model.meter.MeterUserAssignments
 import com.mike.domain.model.meter.Meters
 import com.mike.tuya.TuyaRepository
 import kotlinx.coroutines.CoroutineScope
@@ -13,7 +14,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 class MeterRepositoryImpl(
     private val tuyaRepository: TuyaRepository
-
 ) : MeterRepository {
     val scope = CoroutineScope(Dispatchers.IO)
     override fun findById(id: String): Meter? = transaction {
@@ -65,6 +65,20 @@ class MeterRepositoryImpl(
         meters
     }
 
+    override fun getMetersForUser(userId: Int): List<Meter> {
+        return transaction {
+            val meterIds = MeterUserAssignments.selectAll().where { MeterUserAssignments.userId eq userId }
+                .map { it[MeterUserAssignments.meterId] }
+
+            val meters = Meters.selectAll().where { Meters.meterId inList meterIds }
+                .mapNotNull { resultRow ->
+                    mapToMeter(resultRow)
+                }
+            meters
+        }
+
+    }
+
     override fun createMeter(meter: MeterCreationRequest): String? {
         return transaction {
             val exists = Meters.selectAll().where { Meters.meterId eq meter.meterId }.any()
@@ -92,7 +106,7 @@ class MeterRepositoryImpl(
             Meters.update({ Meters.meterId eq meter.meterId }) {
                 it[name] = meter.name
                 it[productName] = meter.productName
-                // Only update static fields from creation request
+                // Only update static fields from the creation request
             }
         }
     }
