@@ -27,7 +27,7 @@ class UserService(
         return userRepository.createUser(registerRequest)
     }
     
-    fun updateUser(profile: Profile): Pair<Boolean, String?> {
+    fun updateUser(profile: ProfileUpdateRequest): Pair<Boolean, String?> {
         return userRepository.updateUser(profile)
     }
     
@@ -57,5 +57,14 @@ class UserService(
      */
     fun getProfilePicture(userId: Int): ProfilePicture? {
         return userRepository.getProfilePicture(userId)
+    }
+
+    fun deleteProfilePicture(userId: Int): Pair<Boolean, String?> {
+        val profilePicture = getProfilePicture(userId)
+        return if (profilePicture != null) {
+            userRepository.deleteProfilePicture(userId)
+        } else {
+            Pair(false, "No profile picture found for user with ID $userId")
+        }
     }
 }
