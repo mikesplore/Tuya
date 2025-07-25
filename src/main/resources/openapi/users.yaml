@@ -84,7 +84,7 @@ paths:
                 $ref: '#/components/schemas/MessageResponse'
     put:
       summary: Update user
-      description: Update a user's profile (self or admin only).
+      description: Update a user's profile (admin only).
       security:
         - bearerAuth: []
       parameters:
@@ -98,14 +98,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProfileUpdateRequest'
+              $ref: '#/components/schemas/Profile'
       responses:
         '200':
-          description: User updated
+          description: User updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Profile'
+                $ref: '#/components/schemas/MessageResponse'
         '400':
           description: Bad request
           content:
@@ -114,6 +114,12 @@ paths:
                 $ref: '#/components/schemas/MessageResponse'
         '403':
           description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '500':
+          description: Internal server error
           content:
             application/json:
               schema:
@@ -216,6 +222,36 @@ paths:
                 $ref: '#/components/schemas/MessageResponse'
         '400':
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+    delete:
+      summary: Delete user profile image
+      description: Delete a user's profile image by their user ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Profile picture deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '500':
+          description: Internal server error
           content:
             application/json:
               schema:
