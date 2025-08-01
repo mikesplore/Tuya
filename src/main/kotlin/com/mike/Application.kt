@@ -4,8 +4,6 @@ import com.mike.apidocumentation.configureSwagger
 import com.mike.auth.JwtService
 import com.mike.database.DatabaseFactory
 import com.mike.di.appModule
-import com.mike.domain.model.user.RegisterRequest
-import com.mike.domain.repository.mpesa.MpesaRepository
 import com.mike.service.auth.AuthService
 import com.mike.service.meter.MeterPaymentProcessingService
 import com.mike.service.meter.MeterService
@@ -18,12 +16,10 @@ import io.github.cdimascio.dotenv.dotenv
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.calllogging.*
-import kotlinx.coroutines.*
 import org.koin.core.context.startKoin
 import org.koin.ktor.ext.get
 import org.koin.logger.slf4jLogger
 import org.slf4j.event.Level
-import java.time.Duration
 
 fun main(args: Array<String>) {
     // Load .env before starting Ktor
